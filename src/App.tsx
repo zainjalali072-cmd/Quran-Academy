@@ -31,22 +31,30 @@ import {
 import Header from "./components/Header";
 import Starfield from "./components/Starfield";
 import WhatsAppModal from "./components/WhatsAppModal";
-import logoImg from "./assets/images/truth_quran_logo_1784116839263.jpg";
+import logoImg from "./assets/images/truth_quran_new_logo_1784203145448.jpg";
 import kidsLearningBg from "./assets/images/kids_quran_learning_1784116863937.jpg";
 import teacherBg from "./assets/images/online_quran_teacher_1784116886285.jpg";
+import femaleTeacherBg from "./assets/images/female_quran_tutor_1784119152017.jpg";
+import tajweedMasteryBg from "./assets/images/tajweed_mastery_art_1784119171753.jpg";
+import islamicKidsLearningBg from "./assets/images/islamic_kids_learning_1784120227940.jpg";
+import islamicGirlQaidaBg from "./assets/images/islamic_girl_qaida_1784120204322.jpg";
 import FAQAccordion from "./components/FAQAccordion";
 import ContactForm from "./components/ContactForm";
 import DeveloperCard from "./components/DeveloperCard";
 import Footer from "./components/Footer";
 import AutoOpeningQuran from "./components/AutoOpeningQuran";
 import BlogSection from "./components/BlogSection";
+import WPSimulator from "./components/WPSimulator";
+import { getCMSData } from "./cmsStore";
 
 import AboutPage from "./components/AboutPage";
 import CoursesPage from "./components/CoursesPage";
 import NooraniQaidaPage from "./components/NooraniQaidaPage";
 import KidsClassesPage from "./components/KidsClassesPage";
 import FeesPage from "./components/FeesPage";
+import VideosPage from "./components/VideosPage";
 import ContactPage from "./components/ContactPage";
+import DownloadPage from "./components/DownloadPage";
 
 // Simple custom count-up component using React state and native frame scheduler
 function CountUpNumber({ end, suffix = "", duration = 2000 }: { end: number; suffix?: string; duration?: number }) {
@@ -74,8 +82,40 @@ function CountUpNumber({ end, suffix = "", duration = 2000 }: { end: number; suf
 }
 
 export default function App() {
+  const [isWpAdmin, setIsWpAdmin] = useState(() => window.location.pathname.startsWith("/wp-admin"));
   const [currentView, setView] = useState<string>("home");
   const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [cms, setCms] = useState(getCMSData());
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setIsWpAdmin(window.location.pathname.startsWith("/wp-admin"));
+    };
+    window.addEventListener("popstate", handleLocationChange);
+    return () => window.removeEventListener("popstate", handleLocationChange);
+  }, []);
+
+  useEffect(() => {
+    const handleSync = () => setCms(getCMSData());
+    window.addEventListener("cms_data_updated", handleSync);
+    return () => window.removeEventListener("cms_data_updated", handleSync);
+  }, []);
+
+  // Track real-time page views and session activity on the server
+  useEffect(() => {
+    let pageName = currentView;
+    if (currentView === "blog" && activePostId) {
+      pageName = `blog/${activePostId}`;
+    }
+    fetch("/api/track-view", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: JSON.stringify({ page: pageName })
+    }).catch((e) => console.warn("Traffic tracker offline:", e));
+  }, [currentView, activePostId]);
 
   // In-page navigation helper
   const handleScrollToSection = (id: string) => {
@@ -85,9 +125,113 @@ export default function App() {
     }
   };
 
+  if (isWpAdmin) {
+    return (
+      <WPSimulator 
+        onClose={() => {
+          window.history.pushState(null, "", "/");
+          setIsWpAdmin(false);
+          setView("home");
+        }} 
+      />
+    );
+  }
+
   return (
     <div className="relative min-h-screen bg-[#07080b] text-[#f3ecd8] font-sans selection:bg-[#d9b45c] selection:text-[#07080b]">
       
+      {/* Dynamic Style Overrides from WordPress Admin Dashboard Theme Customizer */}
+      <style>{`
+        :root {
+          --color-gold: ${cms.themeColors?.primaryGold || "#d9b45c"};
+          --color-bg-dark: ${cms.themeColors?.bgDark || "#07080b"};
+          --color-card-bg: ${cms.themeColors?.cardBg || "#12141b"};
+          --color-text-light: ${cms.themeColors?.textLight || "#f3ecd8"};
+          --color-text-muted: ${cms.themeColors?.textMuted || "#c9c2ab"};
+          --font-headings: "${cms.themeTypography?.headingFont || "Playfair Display"}", serif;
+          --font-body: "${cms.themeTypography?.bodyFont || "Inter"}", sans-serif;
+        }
+
+        /* Set base colors and fonts dynamically */
+        body, .min-h-screen {
+          background-color: var(--color-bg-dark) !important;
+          color: var(--color-text-light) !important;
+          font-family: var(--font-body) !important;
+          font-size: ${cms.themeTypography?.baseFontSize || "16px"} !important;
+        }
+
+        h1, h2, h3, h4, h5, h6, .font-serif {
+          font-family: var(--font-headings) !important;
+        }
+
+        .text-\\[\\#f3ecd8\\] {
+          color: var(--color-text-light) !important;
+        }
+
+        .text-\\[\\#c9c2ab\\] {
+          color: var(--color-text-muted) !important;
+        }
+
+        .text-\\[\\#d9b45c\\] {
+          color: var(--color-gold) !important;
+        }
+
+        .border-\\[\\#d9b45c\\] {
+          border-color: var(--color-gold) !important;
+        }
+
+        .bg-\\[\\#d9b45c\\] {
+          background-color: var(--color-gold) !important;
+        }
+
+        .bg-\\[\\#12141b\\] {
+          background-color: var(--color-card-bg) !important;
+        }
+
+        /* Dynamic Section Background Images from Media Library / CMS */
+        .hero-section-bg {
+          background-image: linear-gradient(to bottom, rgba(14, 16, 21, 0.94), rgba(7, 8, 11, 0.97)), url("${cms.customImages?.heroBg?.url || kidsLearningBg}") !important;
+        }
+        .why-us-section-bg {
+          background-image: linear-gradient(to bottom, rgba(7, 8, 11, 0.95), rgba(14, 16, 21, 0.96)), url("${cms.customImages?.aboutFemaleTeacherBg?.url || femaleTeacherBg}") !important;
+        }
+        .courses-section-bg {
+          background-image: linear-gradient(to bottom, rgba(14, 16, 21, 0.94), rgba(7, 8, 11, 0.96)), url("${cms.customImages?.tajweedMasteryBg?.url || tajweedMasteryBg}") !important;
+        }
+        .process-section-bg {
+          background-image: linear-gradient(to bottom, rgba(7, 8, 11, 0.94), rgba(14, 16, 21, 0.97)), url("${cms.customImages?.islamicKidsLearningBg?.url || islamicKidsLearningBg}") !important;
+        }
+        .pricing-section-bg {
+          background-image: linear-gradient(to bottom, rgba(14, 16, 21, 0.95), rgba(7, 8, 11, 0.95)), url("${cms.customImages?.aboutTeacherBg?.url || teacherBg}") !important;
+        }
+        .reviews-section-bg {
+          background-image: linear-gradient(to bottom, rgba(7, 8, 11, 0.95), rgba(14, 16, 21, 0.95)), url("${cms.customImages?.aboutFemaleTeacherBg?.url || femaleTeacherBg}") !important;
+        }
+        .blog-section-bg {
+          background-image: linear-gradient(to bottom, rgba(14, 16, 21, 0.95), rgba(7, 8, 11, 0.97)), url("${cms.customImages?.tajweedMasteryBg?.url || tajweedMasteryBg}") !important;
+        }
+        .faq-section-bg {
+          background-image: linear-gradient(to bottom, rgba(7, 8, 11, 0.95), rgba(14, 16, 21, 0.96)), url("${cms.customImages?.islamicGirlQaidaBg?.url || islamicGirlQaidaBg}") !important;
+        }
+        .contact-section-bg {
+          background-image: linear-gradient(to bottom, rgba(14, 16, 21, 0.94), rgba(7, 8, 11, 0.97)), url("${cms.customImages?.aboutTeacherBg?.url || teacherBg}") !important;
+        }
+
+        /* RTL Layout Support */
+        ${cms.siteSettings?.isRTL ? `
+          body {
+            direction: rtl !important;
+            text-align: right !important;
+          }
+          .text-left {
+            text-align: right !important;
+          }
+          .text-right {
+            text-align: left !important;
+          }
+        ` : ""}
+      `}</style>
+
       {/* 1. Global Translucent Twinkling Starfield Background */}
       <Starfield />
 
@@ -104,10 +248,11 @@ export default function App() {
         {currentView === "home" && (
           <>
             {/* HERO SECTION */}
-            <section 
-              id="hero" 
-              className="hero-section-bg pt-10 pb-20 md:py-28 overflow-hidden flex items-center min-h-[calc(100vh-80px)]"
-            >
+            {cms.sectionsVisibility?.hero !== false && (
+              <section 
+                id="hero" 
+                className="hero-section-bg pt-10 pb-20 md:py-28 overflow-hidden flex items-center min-h-[calc(100vh-80px)]"
+              >
               <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center w-full">
                 
                 {/* Left Column: Text & Stats */}
@@ -117,32 +262,38 @@ export default function App() {
                   <div className="flex items-center space-x-2">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#d9b45c] animate-ping" />
                     <span className="text-[12px] font-sans uppercase font-bold tracking-[0.22em] text-[#d9b45c]">
-                      Premium 1-on-1 Online Quranic Academy
+                      {cms.heroKicker}
                     </span>
                   </div>
 
                   {/* Headline with serif and custom gold italicized word */}
                   <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl text-[#f3ecd8] font-medium leading-[1.1] tracking-tight">
-                    Embark on a Spiritual <br />
-                    Journey with <span className="text-[#d9b45c] italic font-normal font-serif">Divine</span> Precision
+                    {cms.heroTitle.includes("Spiritual") ? (
+                      <>
+                        Embark on a Spiritual <br />
+                        Journey with <span className="text-[#d9b45c] italic font-normal font-serif">Divine</span> Precision
+                      </>
+                    ) : (
+                      cms.heroTitle
+                    )}
                   </h1>
 
                   {/* Supporting paragraph */}
                   <p className="text-xs md:text-sm lg:text-base text-[#c9c2ab] leading-relaxed max-w-xl font-light">
-                    Learn Holy Quran recitation, Tajweed, Hifz, and Arabic language from native certified Arab tutors in private 1-on-1 virtual classrooms. Structured curriculums tailored perfectly for children, sisters, and busy professionals.
+                    {cms.heroDescription}
                   </p>
 
                   {/* CTA Buttons */}
                   <div className="flex flex-wrap gap-4 pt-2">
                     {/* Primary Green WhatsApp CTA */}
                     <a
-                      href={`${academyContact.whatsapp}?text=Salam,%20I%20would%20like%20to%20register%20for%20a%20Free%20Trial%20at%20Truth%20Quran%20Academy.`}
+                      href={`${cms.whatsappLink}?text=Salam,%20I%20would%20like%20to%20register%20for%20a%20Free%20Trial%20at%20Truth%20Quran%20Academy.`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center space-x-2 px-6 py-4 rounded-full bg-[#1fae5b] text-white text-xs md:text-sm font-sans font-extrabold uppercase tracking-wider shadow-[0_8px_20px_rgba(31,174,91,0.35)] hover:shadow-[0_8px_30px_rgba(31,174,91,0.55)] hover:-translate-y-0.5 transition-all duration-300"
                     >
                       <MessageCircle size={18} className="fill-current" />
-                      <span>Book Free Trial Session</span>
+                      <span>{cms.heroPrimaryBtnText}</span>
                     </a>
 
                     {/* Secondary Outline CTA */}
@@ -150,8 +301,29 @@ export default function App() {
                       onClick={() => handleScrollToSection("courses")}
                       className="px-6 py-4 rounded-full border border-[#d9b45c]/30 text-xs md:text-sm font-sans font-bold uppercase tracking-wider text-[#f3ecd8] hover:bg-[#d9b45c]/10 hover:border-[#d9b45c] transition-all duration-300 cursor-pointer"
                     >
-                      Explore Courses
+                      {cms.heroSecondaryBtnText}
                     </button>
+                  </div>
+
+                  {/* Class Platforms Banner */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-3 text-left">
+                    <span className="text-[10px] font-sans uppercase tracking-widest text-[#d9b45c] font-bold">
+                      Classes Held Live Via:
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#12141b]/80 border border-[#d9b45c]/20 text-[11px] text-[#f3ecd8] font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                        <span>Zoom</span>
+                      </span>
+                      <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#12141b]/80 border border-[#d9b45c]/20 text-[11px] text-[#f3ecd8] font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#1fae5b] animate-pulse" />
+                        <span>WhatsApp</span>
+                      </span>
+                      <span className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#12141b]/80 border border-[#d9b45c]/20 text-[11px] text-[#f3ecd8] font-semibold">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                        <span>Google Meet</span>
+                      </span>
+                    </div>
                   </div>
 
                   {/* Divider line */}
@@ -198,6 +370,7 @@ export default function App() {
 
               </div>
             </section>
+            )}
 
             {/* ARABIC VERSE TICKER */}
             <div className="w-full bg-[#0e1015] border-y border-[#d9b45c]/18 py-4 overflow-hidden relative select-none">
@@ -228,6 +401,7 @@ export default function App() {
             </div>
 
             {/* WHY CHOOSE US */}
+            {cms.sectionsVisibility?.whyUs !== false && (
             <section id="why-us" className="why-us-section-bg border-y border-[#d9b45c]/10">
               <div className="max-w-7xl mx-auto px-6 py-20 md:py-28 relative">
                 {/* Decorative side blurs */}
@@ -293,8 +467,10 @@ export default function App() {
                 </div>
               </div>
             </section>
+            )}
 
             {/* COURSES SECTION */}
+            {cms.sectionsVisibility?.courses !== false && (
             <section id="courses" className="courses-section-bg py-20 md:py-28 border-y border-[#d9b45c]/12">
               <div className="max-w-7xl mx-auto px-6">
                 
@@ -313,7 +489,7 @@ export default function App() {
 
                 {/* 3-Column Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8" id="courses-grid">
-                  {coursesData.map((course, index) => (
+                  {cms.courses.map((course, index) => (
                     <motion.div
                       key={course.id}
                       initial={{ opacity: 0, y: 30 }}
@@ -390,8 +566,10 @@ export default function App() {
 
               </div>
             </section>
+            )}
 
             {/* PROCESS SECTION */}
+            {cms.sectionsVisibility?.process !== false && (
             <section id="process" className="process-section-bg border-y border-[#d9b45c]/10">
               <div className="max-w-7xl mx-auto px-6 py-20 md:py-28">
                 
@@ -449,8 +627,10 @@ export default function App() {
                 </div>
               </div>
             </section>
+            )}
 
             {/* PRICING SECTION */}
+            {cms.sectionsVisibility?.pricing !== false && (
             <section id="pricing" className="pricing-section-bg py-20 md:py-28 border-y border-[#d9b45c]/12 relative">
               <div className="max-w-7xl mx-auto px-6">
                 
@@ -469,8 +649,28 @@ export default function App() {
 
                 {/* 3-Column Price Cards Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start" id="pricing-grid">
-                  {pricingPlans.map((plan, index) => {
+                  {(cms.pricingPlans || pricingPlans).map((plan, index) => {
                     const isPopular = plan.isPopular;
+                    const basePrice = parseInt((plan.price || "").replace("$", ""), 10) || 45;
+                    
+                    // Standard requested PKR rates: 2 days ($35/$45) -> 5,000, 3 days ($50/$65) -> 7,000, 5 days ($70/$95) -> 10,000
+                    let pkrEquivalent = "";
+                    if (basePrice === 35 || basePrice === 45 || plan.id === "tier-1" || plan.id === "price-1" || plan.name?.toLowerCase().includes("2 days") || plan.name?.toLowerCase().includes("starter")) {
+                      pkrEquivalent = "5,000";
+                    } else if (basePrice === 50 || basePrice === 65 || plan.id === "tier-2" || plan.id === "price-2" || plan.name?.toLowerCase().includes("3 days") || plan.name?.toLowerCase().includes("premium")) {
+                      pkrEquivalent = "7,000";
+                    } else if (basePrice === 70 || basePrice === 95 || plan.id === "tier-3" || plan.id === "price-3" || plan.name?.toLowerCase().includes("5 days") || plan.name?.toLowerCase().includes("mastery")) {
+                      pkrEquivalent = "10,000";
+                    } else {
+                      pkrEquivalent = (basePrice * 278).toLocaleString();
+                    }
+
+                    // Dynamic other currency equivalents
+                    const gbpEquivalent = basePrice === 45 ? 35 : (basePrice === 65 ? 51 : (basePrice === 95 ? 74 : Math.round(basePrice * 0.78)));
+                    const eurEquivalent = basePrice === 45 ? 41 : (basePrice === 65 ? 60 : (basePrice === 95 ? 87 : Math.round(basePrice * 0.92)));
+                    const cadEquivalent = basePrice === 45 ? 62 : (basePrice === 65 ? 89 : (basePrice === 95 ? 130 : Math.round(basePrice * 1.37)));
+                    const audEquivalent = basePrice === 45 ? 68 : (basePrice === 65 ? 98 : (basePrice === 95 ? 143 : Math.round(basePrice * 1.51)));
+
                     return (
                       <motion.div
                         key={plan.id}
@@ -499,13 +699,49 @@ export default function App() {
                           </h3>
 
                           {/* Price */}
-                          <div className="flex items-baseline">
-                            <span className="font-serif text-4xl md:text-5xl lg:text-6xl text-[#f3ecd8] font-bold">
-                              {plan.price}
-                            </span>
-                            <span className="font-sans text-xs text-[#c9c2ab] ml-2">
-                              /{plan.period}
-                            </span>
+                          <div className="space-y-3">
+                            <div className="flex items-baseline border-b border-[#d9b45c]/10 pb-2">
+                              <span className="font-serif text-4xl md:text-5xl lg:text-6xl text-[#f3ecd8] font-bold">
+                                {plan.price}
+                              </span>
+                              <span className="font-sans text-xs text-[#c9c2ab] ml-2">
+                                /{plan.period}
+                              </span>
+                            </div>
+                            
+                            {/* Line-wise Country Equivalents (USD, PKR, then others) */}
+                            <div className="space-y-1.5 pt-0.5 text-[11px] text-[#c9c2ab]">
+                              <div className="flex justify-between items-center bg-[#d9b45c]/5 border border-[#d9b45c]/15 rounded-lg px-2.5 py-1.5">
+                                <span className="font-bold text-[#d9b45c]">PKR Equivalent:</span>
+                                <span className="font-extrabold text-[#f3ecd8]">
+                                  Rs. {pkrEquivalent}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center px-1">
+                                <span>GBP Equivalent:</span>
+                                <span className="font-semibold text-[#f3ecd8]">
+                                  £{gbpEquivalent}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center px-1">
+                                <span>EUR Equivalent:</span>
+                                <span className="font-semibold text-[#f3ecd8]">
+                                  €{eurEquivalent}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center px-1">
+                                <span>CAD Equivalent:</span>
+                                <span className="font-semibold text-[#f3ecd8]">
+                                  C${cadEquivalent}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center px-1">
+                                <span>AUD Equivalent:</span>
+                                <span className="font-semibold text-[#f3ecd8]">
+                                  A${audEquivalent}
+                                </span>
+                              </div>
+                            </div>
                           </div>
 
                           <div className="w-full h-[1px] bg-[#d9b45c]/10 my-2" />
@@ -549,8 +785,10 @@ export default function App() {
 
               </div>
             </section>
+            )}
 
             {/* TESTIMONIALS */}
+            {cms.sectionsVisibility?.testimonials !== false && (
             <section id="reviews" className="reviews-section-bg py-20 md:py-28 overflow-hidden border-y border-[#d9b45c]/12">
               
               {/* Centered Heading */}
@@ -607,8 +845,10 @@ export default function App() {
                 </div>
               </div>
             </section>
+            )}
 
             {/* ACADEMY BLOG SECTION (Archive Mode) */}
+            {cms.sectionsVisibility?.blog !== false && (
             <section id="blog" className="blog-section-bg py-20 md:py-28 border-y border-[#d9b45c]/12">
               <div className="max-w-7xl mx-auto px-6">
                 
@@ -635,8 +875,10 @@ export default function App() {
 
               </div>
             </section>
+            )}
 
             {/* GENERAL FAQ SECTION */}
+            {cms.sectionsVisibility?.faqs !== false && (
             <section id="faq" className="faq-section-bg border-y border-[#d9b45c]/10">
               <div className="max-w-7xl mx-auto px-6 py-20 md:py-28">
                 
@@ -658,6 +900,7 @@ export default function App() {
 
               </div>
             </section>
+            )}
 
             {/* CTA BAND (Full Width Contrasting Gradient Band) */}
             <section className="contact-section-bg py-16 md:py-20 relative overflow-hidden border-y border-[#d9b45c]/20">
@@ -701,24 +944,11 @@ export default function App() {
             </section>
 
             {/* CONTACT SECTION (Two Column) */}
+            {cms.sectionsVisibility?.contact !== false && (
             <section id="contact" className="py-20 md:py-28 max-w-7xl mx-auto px-6">
               <ContactForm />
             </section>
-
-            {/* DEVELOPER/BRANDING CARD */}
-            <section className="py-12 md:py-16 bg-[#0e1015]/30 border-t border-[#d9b45c]/10">
-              <div className="max-w-7xl mx-auto px-6 text-center space-y-8">
-                <div className="space-y-2">
-                  <span className="text-[10px] font-sans uppercase font-bold tracking-[0.2em] text-[#d9b45c]">
-                    Verified Developer Credential
-                  </span>
-                  <h3 className="font-serif text-2xl text-[#f3ecd8] font-medium tracking-tight">
-                    Academy Platform <span className="text-[#d9b45c] italic font-normal">Architect</span>
-                  </h3>
-                </div>
-                <DeveloperCard />
-              </div>
-            </section>
+            )}
           </>
         )}
 
@@ -727,6 +957,8 @@ export default function App() {
         {currentView === "noorani-qaida" && <NooraniQaidaPage />}
         {currentView === "kids-classes" && <KidsClassesPage />}
         {currentView === "fees" && <FeesPage />}
+        {currentView === "download" && <DownloadPage setView={setView} />}
+        {currentView === "videos" && <VideosPage />}
         {currentView === "blog" && (
           <div className="max-w-7xl mx-auto px-6 py-12 text-left space-y-12">
             <div className="text-center max-w-2xl mx-auto space-y-3">
@@ -768,9 +1000,11 @@ export default function App() {
         onNavigate={handleScrollToSection} 
       />
 
-      {/* 16. Floating WhatsApp Pulse Button & Modal */}
-      <WhatsAppModal />
 
-    </div>
-  );
-}
+
+       {/* 16. Floating WhatsApp Pulse Button & Modal */}
+       <WhatsAppModal />
+ 
+     </div>
+   );
+ }

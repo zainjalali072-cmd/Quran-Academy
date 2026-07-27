@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "motion/react";
 import { BookOpen, Award, CheckCircle, Shield, Users, Target, Check } from "lucide-react";
 import { academyContact } from "../data";
@@ -7,9 +7,19 @@ import femaleTeacherBg from "../assets/images/female_quran_tutor_1784119152017.j
 
 import sheikhAbdulRahmanImg from "../assets/images/sheikh_abdul_rahman_1784121404292.jpg";
 import ustadhHafizZainImg from "../assets/images/ustadh_hafiz_zain_1784121424995.jpg";
-import ustadhaMaryamImg from "../assets/images/ustadha_maryam_1784121444960.jpg";
+import ustadhaMaryamImg from "../assets/images/female_quran_tutor_1784119152017.jpg";
+import DeveloperCard from "./DeveloperCard";
+import { getCMSData } from "../cmsStore";
 
 export default function AboutPage({ setView }: { setView: (view: string) => void }) {
+  const [cms, setCms] = useState(getCMSData());
+
+  useEffect(() => {
+    const handleSync = () => setCms(getCMSData());
+    window.addEventListener("cms_data_updated", handleSync);
+    return () => window.removeEventListener("cms_data_updated", handleSync);
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
@@ -39,8 +49,8 @@ export default function AboutPage({ setView }: { setView: (view: string) => void
           <div className="absolute inset-0 bg-[#d9b45c]/5 rounded-3xl filter blur-[40px] pointer-events-none" />
           <div className="relative rounded-3xl overflow-hidden border border-[#d9b45c]/20 shadow-[0_20px_50px_rgba(0,0,0,0.6)]">
             <img
-              src={teacherBg}
-              alt="Online Quran tutor teaching a lesson"
+              src={cms.customImages?.aboutTeacherBg?.url || teacherBg}
+              alt={cms.customImages?.aboutTeacherBg?.alt || "Online Quran tutor teaching a lesson"}
               referrerPolicy="no-referrer"
               className="w-full h-auto object-cover aspect-[4/3] hover:scale-105 transition-transform duration-700"
             />
@@ -125,59 +135,42 @@ export default function AboutPage({ setView }: { setView: (view: string) => void
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="bg-[#12141b]/50 border border-[#d9b45c]/12 rounded-2xl p-6 text-center space-y-4 hover:border-[#d9b45c]/40 transition-colors">
-            <div className="w-20 h-20 rounded-full border-2 border-[#d9b45c]/50 overflow-hidden mx-auto bg-zinc-900">
-              <img
-                src={sheikhAbdulRahmanImg}
-                alt="Sheikh Abdul Rahman"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
+          {(cms.teachers || []).filter(t => t.status === "published").map((teacher) => (
+            <div key={teacher.id} className="bg-[#12141b]/50 border border-[#d9b45c]/12 rounded-2xl p-6 text-center space-y-4 hover:border-[#d9b45c]/40 transition-colors flex flex-col justify-between">
+              <div>
+                <div className="w-20 h-20 rounded-full border-2 border-[#d9b45c]/50 overflow-hidden mx-auto bg-zinc-900">
+                  <img
+                    src={teacher.photo}
+                    alt={teacher.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="mt-4">
+                  <h4 className="font-sans font-bold text-sm text-[#f3ecd8]">{teacher.name}</h4>
+                  <p className="text-[10px] text-[#d9b45c] uppercase tracking-widest mt-0.5">{teacher.role}</p>
+                </div>
+                <p className="text-xs text-[#c9c2ab] leading-relaxed mt-3">
+                  {teacher.bio}
+                </p>
+              </div>
             </div>
-            <div>
-              <h4 className="font-sans font-bold text-sm text-[#f3ecd8]">Sheikh Abdul Rahman</h4>
-              <p className="text-[10px] text-[#d9b45c] uppercase tracking-widest mt-0.5">Head of Quranic Studies</p>
-            </div>
-            <p className="text-xs text-[#c9c2ab] leading-relaxed">
-              Graduate in Islamic Theology, supervising tutor credentials, class materials, and custom curriculum audits.
-            </p>
-          </div>
+          ))}
+        </div>
+      </div>
 
-          <div className="bg-[#12141b]/50 border border-[#d9b45c]/12 rounded-2xl p-6 text-center space-y-4 hover:border-[#d9b45c]/40 transition-colors">
-            <div className="w-20 h-20 rounded-full border-2 border-[#d9b45c]/50 overflow-hidden mx-auto bg-zinc-900">
-              <img
-                src={ustadhHafizZainImg}
-                alt="Ustadh Hafiz Zain"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h4 className="font-sans font-bold text-sm text-[#f3ecd8]">Ustadh Hafiz Zain</h4>
-              <p className="text-[10px] text-[#d9b45c] uppercase tracking-widest mt-0.5">Lead Tajweed Instructor</p>
-            </div>
-            <p className="text-xs text-[#c9c2ab] leading-relaxed">
-              Certified Hafidh with Sanad, teaching advanced Tajweed and phonetics for native and international speakers.
-            </p>
+      {/* Platform Architect Section */}
+      <div className="py-12 md:py-16 bg-[#0e1015]/40 border border-[#d9b45c]/10 relative z-10 rounded-3xl">
+        <div className="max-w-7xl mx-auto px-6 text-center space-y-8">
+          <div className="space-y-2">
+            <span className="text-[10px] font-sans uppercase font-bold tracking-[0.22em] text-[#d9b45c]">
+              Verified Developer Credential
+            </span>
+            <h3 className="font-serif text-2xl text-[#f3ecd8] font-medium tracking-tight">
+              Academy Platform <span className="text-[#d9b45c] italic font-normal font-serif">Architect</span>
+            </h3>
           </div>
-
-          <div className="bg-[#12141b]/50 border border-[#d9b45c]/12 rounded-2xl p-6 text-center space-y-4 hover:border-[#d9b45c]/40 transition-colors">
-            <div className="w-20 h-20 rounded-full border-2 border-[#d9b45c]/50 overflow-hidden mx-auto bg-zinc-900">
-              <img
-                src={ustadhaMaryamImg}
-                alt="Ustadha Maryam Al-Amiri"
-                referrerPolicy="no-referrer"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h4 className="font-sans font-bold text-sm text-[#f3ecd8]">Ustadha Maryam Al-Amiri</h4>
-              <p className="text-[10px] text-[#d9b45c] uppercase tracking-widest mt-0.5">Child Development Expert</p>
-            </div>
-            <p className="text-xs text-[#c9c2ab] leading-relaxed">
-              Specialized child tutor, crafting customized lesson guides and positive reinforcement materials for young kids.
-            </p>
-          </div>
+          <DeveloperCard />
         </div>
       </div>
 

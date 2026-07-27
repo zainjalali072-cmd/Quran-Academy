@@ -130,7 +130,7 @@ export default function WhatsAppModal() {
           <div className="bg-[#F6F3EB]/80 px-5 py-3 border-t border-[#d9b45c]/15 text-center">
             <p className="text-[9px] text-[#5D5749] uppercase tracking-widest flex items-center justify-center space-x-1">
               <Sparkles size={8} className="text-[#d9b45c]" />
-              <span>Truth Quran Online Academy</span>
+              <span>Truth Quran Academy</span>
             </p>
           </div>
         </div>

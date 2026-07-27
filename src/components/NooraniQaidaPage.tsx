@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { Award, BookOpen, Star, HelpCircle, Check, ArrowRight, MessageCircle } from "lucide-react";
 import { academyContact } from "../data";
 import islamicGirlQaida from "../assets/images/islamic_girl_qaida_1784120204322.jpg";
+import islamicGirlLearningNoorani from "../assets/images/islamic_girl_learning_noorani_qaida_1784200315762.jpg";
 
 export default function NooraniQaidaPage() {
   const syllabusSteps = [
@@ -111,11 +112,6 @@ export default function NooraniQaidaPage() {
               key={step.num}
               className="bg-[#12141b]/50 border border-[#d9b45c]/10 rounded-2xl p-6 hover:border-[#d9b45c]/35 transition-all duration-300 relative group overflow-hidden"
             >
-              {/* Corner big number accent */}
-              <span className="absolute -top-4 -right-2 text-7xl font-serif text-[#d9b45c]/5 font-bold pointer-events-none select-none group-hover:text-[#d9b45c]/10 transition-colors">
-                {step.num}
-              </span>
-
               <div className="space-y-4">
                 <span className="w-8 h-8 rounded-lg bg-[#d9b45c]/8 border border-[#d9b45c]/20 flex items-center justify-center font-sans font-extrabold text-[#d9b45c] text-xs">
                   {step.num}
@@ -163,10 +159,10 @@ export default function NooraniQaidaPage() {
 
         <div className="relative rounded-2xl overflow-hidden border border-[#d9b45c]/20 shadow-xl">
           <img
-            src="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=800"
-            alt="Kid happy with headphones on tablet online"
+            src={islamicGirlLearningNoorani}
+            alt="Young Muslim girl smiling and happily studying Noorani Qaida"
             referrerPolicy="no-referrer"
-            className="w-full h-auto object-cover aspect-[4/3]"
+            className="w-full h-auto object-cover aspect-[4/3] hover:scale-105 transition-transform duration-700"
           />
         </div>
       </div>

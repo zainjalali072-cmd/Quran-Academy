@@ -2,16 +2,20 @@ import React, { useState } from "react";
 import { motion } from "motion/react";
 import { Check, Shield, HelpCircle, Calculator, Sparkles, MessageCircle, RefreshCw } from "lucide-react";
 import { pricingPlans, academyContact } from "../data";
+import { getCMSData } from "../cmsStore";
 
-type CurrencyType = "USD" | "GBP" | "EUR" | "CAD" | "AUD";
+type CurrencyType = "USD" | "PKR" | "GBP" | "EUR" | "CAD" | "AUD";
 
 export default function FeesPage() {
+  const cms = getCMSData();
+  const activePricingPlans = cms.pricingPlans || pricingPlans;
   const [currency, setCurrency] = useState<CurrencyType>("USD");
   const [numStudents, setNumStudents] = useState<number>(1);
   const [selectedPlanDays, setSelectedPlanDays] = useState<number>(3); // 2, 3, or 5 days
 
   const currencySymbols: Record<CurrencyType, string> = {
     USD: "$",
+    PKR: "Rs. ",
     GBP: "£",
     EUR: "€",
     CAD: "C$",
@@ -28,26 +32,35 @@ export default function FeesPage() {
   // Convert USD base price to other currencies
   const conversionRates: Record<CurrencyType, number> = {
     USD: 1.0,
+    PKR: 278,
     GBP: 0.78,
     EUR: 0.92,
     CAD: 1.37,
     AUD: 1.51
   };
 
-  const convertPrice = (usdPrice: number, curr: CurrencyType): number => {
+  const convertPrice = (usdPrice: number, curr: CurrencyType, baseUSD: number = 45): number => {
+    if (curr === "PKR") {
+      let basePKR = 5000;
+      if (baseUSD === 65 || baseUSD === 50) basePKR = 7000;
+      if (baseUSD === 95 || baseUSD === 70) basePKR = 10000;
+      
+      const ratio = usdPrice / baseUSD;
+      return Math.round(basePKR * ratio);
+    }
     return Math.round(usdPrice * conversionRates[curr]);
   };
 
   // Calculate dynamic tuition
-  const basePriceUSD = planPricesUSD[selectedPlanDays] || 65;
+  const basePriceUSD = planPricesUSD[selectedPlanDays] || 50;
   const rawTotalUSD = basePriceUSD * numStudents;
   
   // Apply 10% Sibling discount if students > 1
   const discountMultiplier = numStudents > 1 ? 0.9 : 1.0;
   const discountedTotalUSD = rawTotalUSD * discountMultiplier;
   
-  const finalCalculatedPrice = convertPrice(discountedTotalUSD, currency);
-  const perStudentPriceConverted = convertPrice(basePriceUSD * discountMultiplier, currency);
+  const finalCalculatedPrice = convertPrice(discountedTotalUSD, currency, basePriceUSD);
+  const perStudentPriceConverted = convertPrice(basePriceUSD * discountMultiplier, currency, basePriceUSD);
 
   return (
     <motion.div
@@ -81,7 +94,7 @@ export default function FeesPage() {
           
           {/* Currency Switcher Pills */}
           <div className="flex flex-wrap gap-1.5 bg-[#12141b] border border-[#d9b45c]/20 p-1 rounded-full">
-            {(["USD", "GBP", "EUR", "CAD", "AUD"] as CurrencyType[]).map((curr) => (
+            {(["USD", "PKR", "GBP", "EUR", "CAD", "AUD"] as CurrencyType[]).map((curr) => (
               <button
                 key={curr}
                 onClick={() => setCurrency(curr)}
@@ -99,11 +112,11 @@ export default function FeesPage() {
 
         {/* Dynamic Static Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start" id="pricing-page-grid">
-          {pricingPlans.map((plan) => {
+          {activePricingPlans.map((plan) => {
             const isPopular = plan.isPopular;
             // Get base price from text (e.g. "$45" -> 45)
             const basePrice = parseInt(plan.price.replace("$", ""), 10);
-            const convertedVal = convertPrice(basePrice, currency);
+            const convertedVal = convertPrice(basePrice, currency, basePrice);
 
             return (
               <div
@@ -128,7 +141,7 @@ export default function FeesPage() {
                   <div className="flex items-baseline">
                     <span className="font-serif text-4xl md:text-5xl text-[#f3ecd8] font-bold">
                       {currencySymbols[currency]}
-                      {convertedVal}
+                      {convertedVal.toLocaleString()}
                     </span>
                     <span className="font-sans text-xs text-[#c9c2ab] ml-2">
                       /{plan.period}
@@ -244,11 +257,11 @@ export default function FeesPage() {
           <div className="space-y-1">
             <div className="font-serif text-5xl lg:text-6xl text-[#f3ecd8] font-extrabold flex items-center justify-center">
               <span className="text-[#d9b45c] mr-1">{currencySymbols[currency]}</span>
-              <span>{finalCalculatedPrice}</span>
+              <span>{finalCalculatedPrice.toLocaleString()}</span>
             </div>
             <p className="text-[10px] text-[#c9c2ab] uppercase tracking-wider">
               {currencySymbols[currency]}
-              {perStudentPriceConverted} monthly per student
+              {perStudentPriceConverted.toLocaleString()} monthly per student
             </p>
           </div>
 
@@ -266,6 +279,10 @@ export default function FeesPage() {
             <div className="flex justify-between">
               <span>Billing Currency:</span>
               <span className="font-bold text-[#d9b45c]">{currency}</span>
+            </div>
+            <div className="flex justify-between border-t border-[#d9b45c]/10 pt-1.5 mt-1">
+              <span>Classes Conducted Via:</span>
+              <span className="font-bold text-[#f2d98a]">Zoom, WhatsApp, or Google Meet only</span>
             </div>
           </div>
 

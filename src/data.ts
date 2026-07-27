@@ -1,6 +1,6 @@
 import { Course, WhyUsPoint, ProcessStep, PricingPlan, Testimonial, FAQItem, BlogPost } from "./types";
 
-import logoImg from "./assets/images/truth_quran_logo_1784116839263.jpg";
+import logoImg from "./assets/images/truth_quran_new_logo_1784203145448.jpg";
 import kidsLearningBg from "./assets/images/kids_quran_learning_1784116863937.jpg";
 import teacherBg from "./assets/images/online_quran_teacher_1784116886285.jpg";
 import femaleTeacherBg from "./assets/images/female_quran_tutor_1784119152017.jpg";
@@ -9,12 +9,12 @@ import tajweedMasteryBg from "./assets/images/tajweed_mastery_art_1784119171753.
 // New specialized individual assets
 import sheikhAbdulRahmanImg from "./assets/images/sheikh_abdul_rahman_1784121404292.jpg";
 import ustadhHafizZainImg from "./assets/images/ustadh_hafiz_zain_1784121424995.jpg";
-import ustadhaMaryamImg from "./assets/images/ustadha_maryam_1784121444960.jpg";
+import ustadhaMaryamImg from "./assets/images/female_quran_tutor_1784119152017.jpg";
 
-import blogHifzTipsImg from "./assets/images/blog_hifz_tips_1784121464842.jpg";
+import blogHifzTipsImg from "./assets/images/kids_quran_learning_1784116863937.jpg";
 import blogTajweedRulesImg from "./assets/images/blog_tajweed_rules_1784121484956.jpg";
-import blogParentingGuideImg from "./assets/images/blog_parenting_guide_1784121504386.jpg";
-import blogTafseerTranslationImg from "./assets/images/blog_tafseer_translation_1784121525775.jpg";
+import blogTafseerTranslationImg from "./assets/images/parent_kids_quran_1784121554278.jpg";
+import developerAbbasAliImg from "./assets/images/developer_abbas_ali_1784201380694.jpg";
 
 export const academyContact = {
   phone: "+92 321 9347471",
@@ -26,7 +26,7 @@ export const academyContact = {
   developerName: "Abbas Ali",
   developerRole: "Full Stack Developer",
   developerGithub: "https://github.com",
-  developerAvatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"
+  developerAvatar: developerAbbasAliImg
 };
 
 export const coursesData: Course[] = [
@@ -132,7 +132,7 @@ export const processSteps: ProcessStep[] = [
   {
     stepNumber: 4,
     title: "Begin Your Quranic Journey",
-    description: "Gain lifetime access to your digital dashboard, attend lessons via stable 1-on-1 online classrooms, and track weekly progress reports."
+    description: "Gain lifetime access to your digital dashboard, attend live lessons exclusively via Zoom, WhatsApp, or Google Meet, and track weekly progress reports."
   }
 ];
 
@@ -232,7 +232,7 @@ export const faqItems: FAQItem[] = [
   {
     id: "f2",
     question: "How do the 1-on-1 online classes take place?",
-    answer: "Classes are conducted live over secure, high-definition video classrooms (typically Zoom, Skype, or Google Meet). The teacher shares a digital copy of the Quran, Noorani Qaida, or Islamic worksheets, utilizing digital pens to draw, highlight, and guide pronunciation in real-time. It is highly interactive and matches the physical learning experience perfectly."
+    answer: "Classes are conducted live exclusively over Zoom, WhatsApp, or Google Meet. The teacher shares a digital copy of the Quran, Noorani Qaida, or Islamic worksheets, utilizing digital pens to draw, highlight, and guide pronunciation in real-time. It is highly interactive and matches the physical learning experience perfectly."
   },
   {
     id: "f3",
@@ -336,46 +336,7 @@ export const blogPostsData: BlogPost[] = [
 <p>During the recitation of Surah Al-Fatihah in daily Salah, substituting one letter for another can transform a prayer of praise into an incorrect statement. Learning Tajweed is not a luxury—it is an essential duty to protect our worship and respect the divine scripture.</p>
 `
   },
-  {
-    id: "islamic-parenting",
-    title: "Nurturing a Love for the Quran in Children: An Islamic Parenting Guide",
-    excerpt: "How do we inspire our children to read and memorize the Quran out of love rather than coercion? Explore modern educational psychology integrated with Islamic parenting principles.",
-    category: "Parenting",
-    coverImage: blogParentingGuideImg,
-    author: {
-      name: "Ustadha Maryam Al-Amiri",
-      avatar: ustadhaMaryamImg,
-      role: "Child Development Expert"
-    },
-    date: "June 15, 2026",
-    readTime: "7 min read",
-    tags: ["Parenting", "Islamic Education", "Kids Quran", "Spiritual Growth"],
-    arabicVerse: {
-      arabic: "رَبِّ هَبْ لِي مِنَ الصَّالِحِينَ",
-      translation: "My Lord! Grant me a child from among the righteous.",
-      citation: "Surah As-Saffat, 37:100"
-    },
-    content: `
-<p>In our modern, high-tech, fast-paced world, parents face significant hurdles in drawing children to the beauty of the Quran. Traditional rote-learning can sometimes feel cold and disconnected. Here is how we cultivate a genuine love.</p>
 
-<h3>1. Lead by Living Example</h3>
-<p>Children are master copycats. If they never see their parents holding, reading, or kissing the Quran, no amount of verbal ordering will inspire them. Let your home echo with the sound of Quranic recitation daily.</p>
-
-<h3>2. Associate Quran with Warmth and Celebration</h3>
-<p>Create a festive, rewarding atmosphere. Celebrate their milestones—whether they complete the first page of Noorani Qaida or memorize a short Surah. Award them with healthy treats, family outings, or customized gifts. Quran time should feel like a reward, never a punishment.</p>
-
-<h3>3. Use Stories to Connect the Hearts</h3>
-<p>Before asking children to memorize abstract words, build their affection for the stories inside. Recount the miraculous stories of Prophet Yusuf, Prophet Musa, and the beautiful ethics of Prophet Muhammad (PBUH). Once their hearts are attached to the stories, memorization becomes an organic pursuit.</p>
-
-<blockquote>
-  "My Lord! Grant me a child from among the righteous."
-  <cite>Surah As-Saffat, 37:100</cite>
-</blockquote>
-
-<h3>4. Choose the Right Online Academy</h3>
-<p>A harsh, impatient teacher can turn a child away from the Quran permanently. It is critical to select certified tutors who understand modern child psychology, employ fun gamified strategies, and project patience, warmth, and constant positive encouragement.</p>
-`
-  },
   {
     id: "benefits-of-translation",
     title: "The Transformative Power of Reading Quran with Tafseer & Understanding",

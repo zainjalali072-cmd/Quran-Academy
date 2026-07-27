@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Facebook, Instagram, MessageCircle, Phone, Mail, MapPin, Sparkles } from "lucide-react";
 import { academyContact, coursesData } from "../data";
-import logoImg from "../assets/images/truth_quran_logo_1784116839263.jpg";
+import logoImg from "../assets/images/truth_quran_new_logo_1784203145448.jpg";
+import { getCMSData } from "../cmsStore";
 
 interface FooterProps {
   setView: (view: string) => void;
@@ -9,10 +10,19 @@ interface FooterProps {
 }
 
 export default function Footer({ setView, onNavigate }: FooterProps) {
+  const [cms, setCms] = useState(getCMSData());
+
+  useEffect(() => {
+    const handleSync = () => setCms(getCMSData());
+    window.addEventListener("cms_data_updated", handleSync);
+    return () => window.removeEventListener("cms_data_updated", handleSync);
+  }, []);
+
   const handleLinkClick = (id: string) => {
     setView(id);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
 
   return (
     <footer className="bg-[#07080b] border-t border-[#d9b45c]/18 pt-16 pb-8 text-left relative z-10" id="academy-footer">
@@ -24,20 +34,20 @@ export default function Footer({ setView, onNavigate }: FooterProps) {
           {/* Column 1: Brand Blurb (lg:col-span-4) */}
           <div className="lg:col-span-4 space-y-5" id="footer-col-1">
             <div className="flex items-center space-x-2.5 cursor-pointer" onClick={() => handleLinkClick("home")}>
-              <div className="w-12 h-12 rounded-full border border-[#d9b45c]/40 flex items-center justify-center overflow-hidden bg-[#0e1015] flex-shrink-0">
+              <div className="w-12 h-12 rounded-xl border border-[#d9b45c]/40 flex items-center justify-center overflow-hidden bg-[#0e1015] flex-shrink-0">
                 <img 
-                  src={logoImg} 
-                  alt="Truth Quran Logo" 
+                  src={cms.customImages?.siteLogo?.url || logoImg} 
+                  alt={cms.customImages?.siteLogo?.alt || "Truth Quran Logo"} 
                   referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover scale-[1.08]" 
+                  className="w-full h-full object-contain" 
                 />
               </div>
               <div className="flex flex-col">
                 <span className="font-sans font-extrabold text-xs tracking-wider text-[#f3ecd8] uppercase">
-                  Truth <span className="text-[#d9b45c]">Quran</span>
+                  {cms.siteLogoText} <span className="text-[#d9b45c]">{cms.siteLogoSubText}</span>
                 </span>
                 <span className="font-serif italic text-[10px] text-[#d9b45c] leading-none">
-                  Online Quran Academy
+                  Academy
                 </span>
               </div>
             </div>
@@ -135,10 +145,26 @@ export default function Footer({ setView, onNavigate }: FooterProps) {
               </li>
               <li>
                 <button
+                  onClick={() => handleLinkClick("videos")}
+                  className="text-xs text-[#c9c2ab] hover:text-[#f2d98a] transition-colors cursor-pointer"
+                >
+                  Video Gallery
+                </button>
+              </li>
+              <li>
+                <button
                   onClick={() => handleLinkClick("fees")}
                   className="text-xs text-[#c9c2ab] hover:text-[#f2d98a] transition-colors cursor-pointer"
                 >
-                  Tuition Fee Plans
+                  Pricing
+                </button>
+              </li>
+              <li>
+                <button
+                  onClick={() => handleLinkClick("download")}
+                  className="text-xs text-[#c9c2ab] hover:text-[#f2d98a] transition-colors cursor-pointer"
+                >
+                  Download Quran
                 </button>
               </li>
               <li>
@@ -170,17 +196,17 @@ export default function Footer({ setView, onNavigate }: FooterProps) {
               <li className="flex items-start space-x-2">
                 <MapPin size={14} className="text-[#d9b45c] mt-0.5 flex-shrink-0" />
                 <span className="text-xs text-[#c9c2ab] leading-relaxed">
-                  {academyContact.address}
+                  {cms.contactAddress}
                 </span>
               </li>
               <li className="flex items-center space-x-2">
                 <Phone size={14} className="text-[#d9b45c] flex-shrink-0" />
-                <span className="text-xs text-[#c9c2ab]">{academyContact.phone}</span>
+                <span className="text-xs text-[#c9c2ab]">{cms.contactPhone}</span>
               </li>
               <li className="flex items-center space-x-2">
                 <Mail size={14} className="text-[#d9b45c] flex-shrink-0" />
-                <a href={`mailto:${academyContact.email}`} className="text-xs text-[#c9c2ab] hover:text-[#f2d98a] transition-colors">
-                  {academyContact.email}
+                <a href={`mailto:${cms.contactEmail}`} className="text-xs text-[#c9c2ab] hover:text-[#f2d98a] transition-colors">
+                  {cms.contactEmail}
                 </a>
               </li>
             </ul>
@@ -196,9 +222,9 @@ export default function Footer({ setView, onNavigate }: FooterProps) {
           <p className="text-[10px] text-[#c9c2ab] uppercase tracking-wider">
             Developed by{" "}
             <span className="text-[#d9b45c] font-bold group-hover:text-[#f2d98a] transition-colors">
-              {academyContact.developerName}
+              {cms.developerName}
             </span>{" "}
-            | Truth Quran Online Quran Academy
+            | Truth Quran Academy
           </p>
         </div>
 
