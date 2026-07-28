@@ -17,9 +17,25 @@ Your project has been fully configured and optimized for **Hostinger Hosting** (
 
 ---
 
-## 📦 Step-by-Step Deployment on Hostinger (Node.js Web App)
+## 📦 Step-by-Step Deployment on Hostinger (Node.js Web App / Automated Git Deploy)
 
-### Step 1: Build Your Application locally or in AI Studio
+### If deploying via Hostinger Git / Automated Build UI (As shown in your screenshot):
+1. **Framework preset**: Select `Express`
+2. **Branch**: Select `main`
+3. **Node version**: Select **`20.x`** (Strictly required to avoid Rollup GLIBC 2.29 errors on Hostinger Linux servers)
+4. **Root directory**: `./`
+5. **Package manager**: `npm`
+6. **Entry file**: `server.js`
+7. Click **Save and redeploy**.
+
+> ✅ **Why it will succeed now**:
+> - We moved all required build dependencies (`vite`, `esbuild`, `rollup`, `@rollup/wasm-node`, `typescript`, `tsx`, `tailwindcss`) from `devDependencies` into `dependencies`. This ensures Hostinger installs them even when `NODE_ENV=production` is set!
+> - We added an automated `postinstall` script in `package.json` so Hostinger automatically builds the production bundle after running `npm install`.
+> - Even if Hostinger skips the build step and boots `server.js` directly, our updated `server.js`, `app.js`, and `index.js` files now automatically detect if `dist/server.cjs` is missing and compile the production bundle on-the-fly before launching!
+
+---
+
+### Step 1: Build Your Application locally or in AI Studio (If uploading manually via File Manager)
 Before uploading, ensure your app is built into the production `dist` folder:
 ```bash
 npm install
