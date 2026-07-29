@@ -7,8 +7,8 @@
   "heroPrimaryBtnText": "Book Free Trial Session",
   "heroSecondaryBtnText": "Explore Courses",
   "contactPhone": "+92 321 9347471",
-  "contactEmail": "zainjalali072@gmail.com",
-  "contactAddress": "Rawalpindi, Pakistan",
+  "contactEmail": "muhammadzain92624@gmail.com",
+  "contactAddress": "Altaf Colony, Ranjar Head Quarter, Lahore Cantt, Pakistan",
   "whatsappLink": "https://wa.me/923219347471",
   "facebookLink": "https://facebook.com/truthquranacademy",
   "instagramLink": "https://instagram.com/truthquranacademy",
@@ -53,7 +53,7 @@
     {
       "id": "price-1",
       "name": "Basic Starter",
-      "price": "$45",
+      "price": "$30",
       "period": "month",
       "features": [
         "1-on-1 Classes",
@@ -65,7 +65,7 @@
     {
       "id": "price-2",
       "name": "Standard Premium",
-      "price": "$65",
+      "price": "$45",
       "period": "month",
       "features": [
         "1-on-1 Classes",
@@ -79,7 +79,7 @@
     {
       "id": "price-3",
       "name": "Elite Mastery",
-      "price": "$95",
+      "price": "$60",
       "period": "month",
       "features": [
         "1-on-1 Classes",
@@ -206,7 +206,7 @@
     {
       "id": "u-1",
       "name": "Muhammad Zain",
-      "email": "zainjalali072@gmail.com",
+      "email": "muhammadzain92624@gmail.com",
       "role": "Administrator",
       "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
       "registeredDate": "2026-06-15",
@@ -37904,6 +37904,42 @@
     },
     {
       "timestamp": "2026-07-21T12:26:53.582Z",
+      "ip": "116.90.119.251, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-29T13:44:35.953Z",
+      "ip": "116.90.119.251, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-29T13:44:35.980Z",
+      "ip": "116.90.119.251, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-29T13:53:02.305Z",
+      "ip": "116.90.119.251, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-29T13:53:02.336Z",
       "ip": "116.90.119.251, 169.254.169.126",
       "country": "US",
       "browser": "Chrome",

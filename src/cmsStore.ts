@@ -251,7 +251,7 @@ const DEFAULT_NAVIGATION_MENU: WPMenuItem[] = [
 ];
 
 const DEFAULT_USERS: WPUser[] = [
-  { id: "u-1", name: "Muhammad Zain", email: "zainjalali072@gmail.com", role: "Administrator", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-15" },
+  { id: "u-1", name: "Muhammad Zain", email: "muhammadzain92624@gmail.com", role: "Administrator", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-15" },
   { id: "u-2", name: "Dr. Al-Azhar Scholar", email: "scholar@truthquran.com", role: "Editor", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-20" },
   { id: "u-3", name: "Aisha Al-Ansari", email: "aisha@truthquran.com", role: "Author", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-07-01" },
 ];
@@ -617,9 +617,32 @@ export const getCMSData = (): CMSData => {
         });
       }
       
+      // map pricing plans to ensure new fee structure ($30, $45, $60) is reflected
+      if (parsed.pricingPlans) {
+        parsed.pricingPlans = parsed.pricingPlans.map((plan: any) => {
+          if (plan.id === "price-1" || plan.id === "tier-1" || plan.name?.toLowerCase().includes("starter") || plan.name?.toLowerCase().includes("2 days")) {
+            return { ...plan, price: "$30" };
+          }
+          if (plan.id === "price-2" || plan.id === "tier-2" || plan.name?.toLowerCase().includes("premium") || plan.name?.toLowerCase().includes("3 days")) {
+            return { ...plan, price: "$45" };
+          }
+          if (plan.id === "price-3" || plan.id === "tier-3" || plan.name?.toLowerCase().includes("mastery") || plan.name?.toLowerCase().includes("5 days")) {
+            return { ...plan, price: "$60" };
+          }
+          return plan;
+        });
+      }
+
       // map blog posts to have advanced SEO fields populated
       if (parsed.blogPosts) {
         parsed.blogPosts = parsed.blogPosts.map(ensureBlogPostSEO);
+      }
+
+      if (parsed.contactEmail === "zainjalali072@gmail.com") {
+        parsed.contactEmail = "muhammadzain92624@gmail.com";
+      }
+      if (parsed.contactAddress && parsed.contactAddress.includes("Rawalpindi")) {
+        parsed.contactAddress = "Altaf Colony, Ranjar Head Quarter, Lahore Cantt, Pakistan";
       }
 
       return parsed;

@@ -24,9 +24,9 @@ export default function FeesPage() {
 
   // Static pricing mappings for days per week in USD base
   const planPricesUSD: Record<number, number> = {
-    2: 45,
-    3: 65,
-    5: 95
+    2: 30,
+    3: 45,
+    5: 60
   };
 
   // Convert USD base price to other currencies
@@ -39,11 +39,11 @@ export default function FeesPage() {
     AUD: 1.51
   };
 
-  const convertPrice = (usdPrice: number, curr: CurrencyType, baseUSD: number = 45): number => {
+  const convertPrice = (usdPrice: number, curr: CurrencyType, baseUSD: number = 30): number => {
     if (curr === "PKR") {
-      let basePKR = 5000;
-      if (baseUSD === 65 || baseUSD === 50) basePKR = 7000;
-      if (baseUSD === 95 || baseUSD === 70) basePKR = 10000;
+      let basePKR = 3500;
+      if (baseUSD === 45) basePKR = 5000;
+      if (baseUSD === 60) basePKR = 7000;
       
       const ratio = usdPrice / baseUSD;
       return Math.round(basePKR * ratio);
@@ -52,7 +52,7 @@ export default function FeesPage() {
   };
 
   // Calculate dynamic tuition
-  const basePriceUSD = planPricesUSD[selectedPlanDays] || 50;
+  const basePriceUSD = planPricesUSD[selectedPlanDays] || 45;
   const rawTotalUSD = basePriceUSD * numStudents;
   
   // Apply 10% Sibling discount if students > 1

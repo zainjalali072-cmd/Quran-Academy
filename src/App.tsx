@@ -651,25 +651,25 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 items-start" id="pricing-grid">
                   {(cms.pricingPlans || pricingPlans).map((plan, index) => {
                     const isPopular = plan.isPopular;
-                    const basePrice = parseInt((plan.price || "").replace("$", ""), 10) || 45;
+                    const basePrice = parseInt((plan.price || "").replace("$", ""), 10) || 30;
                     
-                    // Standard requested PKR rates: 2 days ($35/$45) -> 5,000, 3 days ($50/$65) -> 7,000, 5 days ($70/$95) -> 10,000
+                    // PKR equivalencies for new $30, $45, $60 base fees
                     let pkrEquivalent = "";
-                    if (basePrice === 35 || basePrice === 45 || plan.id === "tier-1" || plan.id === "price-1" || plan.name?.toLowerCase().includes("2 days") || plan.name?.toLowerCase().includes("starter")) {
+                    if (basePrice === 30 || plan.id === "tier-1" || plan.id === "price-1" || plan.name?.toLowerCase().includes("2 days") || plan.name?.toLowerCase().includes("starter")) {
+                      pkrEquivalent = "3,500";
+                    } else if (basePrice === 45 || plan.id === "tier-2" || plan.id === "price-2" || plan.name?.toLowerCase().includes("3 days") || plan.name?.toLowerCase().includes("premium")) {
                       pkrEquivalent = "5,000";
-                    } else if (basePrice === 50 || basePrice === 65 || plan.id === "tier-2" || plan.id === "price-2" || plan.name?.toLowerCase().includes("3 days") || plan.name?.toLowerCase().includes("premium")) {
+                    } else if (basePrice === 60 || plan.id === "tier-3" || plan.id === "price-3" || plan.name?.toLowerCase().includes("5 days") || plan.name?.toLowerCase().includes("mastery")) {
                       pkrEquivalent = "7,000";
-                    } else if (basePrice === 70 || basePrice === 95 || plan.id === "tier-3" || plan.id === "price-3" || plan.name?.toLowerCase().includes("5 days") || plan.name?.toLowerCase().includes("mastery")) {
-                      pkrEquivalent = "10,000";
                     } else {
-                      pkrEquivalent = (basePrice * 278).toLocaleString();
+                      pkrEquivalent = Math.round(basePrice * 116.66).toLocaleString();
                     }
 
-                    // Dynamic other currency equivalents
-                    const gbpEquivalent = basePrice === 45 ? 35 : (basePrice === 65 ? 51 : (basePrice === 95 ? 74 : Math.round(basePrice * 0.78)));
-                    const eurEquivalent = basePrice === 45 ? 41 : (basePrice === 65 ? 60 : (basePrice === 95 ? 87 : Math.round(basePrice * 0.92)));
-                    const cadEquivalent = basePrice === 45 ? 62 : (basePrice === 65 ? 89 : (basePrice === 95 ? 130 : Math.round(basePrice * 1.37)));
-                    const audEquivalent = basePrice === 45 ? 68 : (basePrice === 65 ? 98 : (basePrice === 95 ? 143 : Math.round(basePrice * 1.51)));
+                    // Dynamic other currency equivalents for $30, $45, $60
+                    const gbpEquivalent = basePrice === 30 ? 23 : (basePrice === 45 ? 35 : (basePrice === 60 ? 47 : Math.round(basePrice * 0.78)));
+                    const eurEquivalent = basePrice === 30 ? 28 : (basePrice === 45 ? 41 : (basePrice === 60 ? 55 : Math.round(basePrice * 0.92)));
+                    const cadEquivalent = basePrice === 30 ? 41 : (basePrice === 45 ? 62 : (basePrice === 60 ? 82 : Math.round(basePrice * 1.37)));
+                    const audEquivalent = basePrice === 30 ? 45 : (basePrice === 45 ? 68 : (basePrice === 60 ? 91 : Math.round(basePrice * 1.51)));
 
                     return (
                       <motion.div

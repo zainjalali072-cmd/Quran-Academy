@@ -140,7 +140,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "tier-1",
     name: "2 Days / Week",
-    price: "$35",
+    price: "$30",
     period: "month",
     features: [
       "8 Interactive 1-on-1 Lessons",
@@ -155,7 +155,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "tier-2",
     name: "3 Days / Week",
-    price: "$50",
+    price: "$45",
     period: "month",
     features: [
       "12 Interactive 1-on-1 Lessons",
@@ -171,7 +171,7 @@ export const pricingPlans: PricingPlan[] = [
   {
     id: "tier-3",
     name: "5 Days / Week",
-    price: "$70",
+    price: "$60",
     period: "month",
     features: [
       "20 Interactive 1-on-1 Lessons",

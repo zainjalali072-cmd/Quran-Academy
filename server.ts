@@ -31,7 +31,7 @@ const parseCookies = (cookieHeader?: string): Record<string, string> => {
 
 // Default structures for seeding
 const DEFAULT_USERS = [
-  { id: "u-1", name: "Muhammad Zain", email: "zainjalali072@gmail.com", role: "Administrator", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-15" },
+  { id: "u-1", name: "Muhammad Zain", email: "muhammadzain92624@gmail.com", role: "Administrator", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-15" },
   { id: "u-2", name: "Dr. Al-Azhar Scholar", email: "scholar@truthquran.com", role: "Editor", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-20" },
   { id: "u-3", name: "Aisha Al-Ansari", email: "aisha@truthquran.com", role: "Author", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-07-01" },
 ];
@@ -73,8 +73,8 @@ const getDatabase = () => {
       heroPrimaryBtnText: "Book Free Trial Session",
       heroSecondaryBtnText: "Explore Courses",
       contactPhone: "+92 321 9347471",
-      contactEmail: "zainjalali072@gmail.com",
-      contactAddress: "Rawalpindi, Pakistan",
+      contactEmail: "muhammadzain92624@gmail.com",
+      contactAddress: "Altaf Colony, Ranjar Head Quarter, Lahore Cantt, Pakistan",
       whatsappLink: "https://wa.me/923219347471",
       facebookLink: "https://facebook.com/truthquranacademy",
       instagramLink: "https://instagram.com/truthquranacademy",
@@ -86,7 +86,7 @@ const getDatabase = () => {
         {
           id: "price-1",
           name: "Basic Starter",
-          price: "$45",
+          price: "$30",
           period: "month",
           features: [
             "1-on-1 Classes",
@@ -98,7 +98,7 @@ const getDatabase = () => {
         {
           id: "price-2",
           name: "Standard Premium",
-          price: "$65",
+          price: "$45",
           period: "month",
           features: [
             "1-on-1 Classes",
@@ -112,7 +112,7 @@ const getDatabase = () => {
         {
           id: "price-3",
           name: "Elite Mastery",
-          price: "$95",
+          price: "$60",
           period: "month",
           features: [
             "1-on-1 Classes",
@@ -251,9 +251,29 @@ const getDatabase = () => {
     }
   }
 
+  let needsSave = false;
+
+  // Ensure contactEmail and address migration to new requested defaults
+  if (db.contactEmail === "zainjalali072@gmail.com") {
+    db.contactEmail = "muhammadzain92624@gmail.com";
+    needsSave = true;
+  }
+  if (db.contactAddress && db.contactAddress.includes("Rawalpindi")) {
+    db.contactAddress = "Altaf Colony, Ranjar Head Quarter, Lahore Cantt, Pakistan";
+    needsSave = true;
+  }
+
   // Ensure userProfiles exists
   if (!db.userProfiles) {
     db.userProfiles = [...DEFAULT_USERS];
+  } else {
+    db.userProfiles = db.userProfiles.map((u: any) => {
+      if (u.email === "zainjalali072@gmail.com") {
+        needsSave = true;
+        return { ...u, email: "muhammadzain92624@gmail.com" };
+      }
+      return u;
+    });
   }
 
   // Ensure Administrator muhammadzain92624@gmail.com exists with password hash of "MuhammadZain786.."
@@ -271,7 +291,7 @@ const getDatabase = () => {
   }
 
   // Iterate over userProfiles and make sure everyone has a passwordHash
-  let needsSave = !hasZainAdmin;
+  if (!hasZainAdmin) needsSave = true;
   db.userProfiles.forEach((u: any) => {
     if (!u.passwordHash) {
       if (u.email === "muhammadzain92624@gmail.com") {
