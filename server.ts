@@ -598,6 +598,70 @@ app.post("/api/cms-data", csrfProtection, inputScrubber, (req, res) => {
   return res.json({ success: true, message: "WP DB fully synchronized!" });
 });
 
+// Dynamic Sitemap XML Endpoint for Google Search Console & Search Engines
+app.get("/sitemap.xml", (req, res) => {
+  const db = getDatabase();
+  const domain = "https://truthquranacademy.com";
+  const now = new Date().toISOString().split("T")[0];
+
+  const staticPages = [
+    "",
+    "/about",
+    "/courses",
+    "/noorani-qaida",
+    "/kids-classes",
+    "/fees",
+    "/videos",
+    "/contact",
+    "/download"
+  ];
+
+  let xml = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+  xml += `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">\n`;
+
+  staticPages.forEach((p) => {
+    xml += `  <url>\n`;
+    xml += `    <loc>${domain}${p}</loc>\n`;
+    xml += `    <lastmod>${now}</lastmod>\n`;
+    xml += `    <changefreq>${p === "" ? "daily" : "weekly"}</changefreq>\n`;
+    xml += `    <priority>${p === "" ? "1.0" : "0.8"}</priority>\n`;
+    xml += `  </url>\n`;
+  });
+
+  const blogPosts = db.blogPosts || [];
+  blogPosts.forEach((post: any) => {
+    if (!post.status || post.status === "published") {
+      const slug = post.slug || post.id || "article";
+      xml += `  <url>\n`;
+      xml += `    <loc>${domain}/blog/${slug}</loc>\n`;
+      xml += `    <lastmod>${post.publishDate || now}</lastmod>\n`;
+      xml += `    <changefreq>weekly</changefreq>\n`;
+      xml += `    <priority>0.7</priority>\n`;
+      xml += `  </url>\n`;
+    }
+  });
+
+  xml += `</urlset>`;
+
+  res.header("Content-Type", "application/xml");
+  res.send(xml);
+});
+
+// Robots.txt Endpoint
+app.get("/robots.txt", (req, res) => {
+  const db = getDatabase();
+  const content = db.robotsTxtContent || `# Truth Quran Academy Robots.txt Rules
+User-agent: *
+Allow: /
+Disallow: /wp-admin/
+Disallow: /api/
+
+Sitemap: https://truthquranacademy.com/sitemap.xml`;
+
+  res.header("Content-Type", "text/plain");
+  res.send(content);
+});
+
 // Vite Middleware for dev or serving statics in production
 const startServer = async () => {
   if (process.env.NODE_ENV !== "production") {

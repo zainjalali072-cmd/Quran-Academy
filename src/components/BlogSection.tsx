@@ -26,10 +26,10 @@ export default function BlogSection({
     return () => window.removeEventListener("cms_data_updated", handleSync);
   }, []);
 
-  const currentPosts = cms.posts || blogPostsData;
+  const allPosts = (cms.blogPosts && cms.blogPosts.length > 0) ? cms.blogPosts : (cms.posts || blogPostsData);
+  const currentPosts = allPosts.filter(p => !p.status || p.status === "published");
 
-
-  const categories = ["All", "Quran Memorization Tips", "Tajweed Rules", "Islamic Studies"];
+  const categories = ["All", ...Array.from(new Set(allPosts.map(p => p.category).filter(Boolean)))];
 
   // Handle post clicks
   const handlePostClick = (postId: string) => {
@@ -47,7 +47,7 @@ export default function BlogSection({
 
   // Render Single Full Blog Post View
   if (currentView === "blog-post" && activePostId) {
-    const post = currentPosts.find((p) => p.id === activePostId);
+    const post = allPosts.find((p) => p.id === activePostId);
     if (!post) {
       return (
         <div className="text-center py-20">

@@ -45,6 +45,7 @@ import Footer from "./components/Footer";
 import AutoOpeningQuran from "./components/AutoOpeningQuran";
 import BlogSection from "./components/BlogSection";
 import WPSimulator from "./components/WPSimulator";
+import SEOHead from "./components/SEOHead";
 import { getCMSData } from "./cmsStore";
 
 import AboutPage from "./components/AboutPage";
@@ -231,6 +232,9 @@ export default function App() {
           }
         ` : ""}
       `}</style>
+
+      {/* Dynamic SEO Head with Auto Metadata & Google Search Console verification */}
+      <SEOHead cmsData={cms} currentView={currentView} activePostId={activePostId} />
 
       {/* 1. Global Translucent Twinkling Starfield Background */}
       <Starfield />

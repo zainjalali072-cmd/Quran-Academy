@@ -128,8 +128,12 @@ export interface CMSData {
     gtmId: string;
     fbPixelId: string;
     clarityId: string;
+    googleSiteVerification?: string;
     isConnected: boolean;
   };
+  robotsTxtContent?: string;
+  redirects?: Array<{ from: string; to: string; type: number; id: string }>;
+  logs404?: Array<{ url: string; hits: number; lastHit: string; referer?: string }>;
   analyticsData: {
     totalVisitors: number;
     uniqueVisitors: number;
@@ -394,6 +398,7 @@ export const DEFAULT_INTEGRATIONS = {
   gtmId: "GTM-P8QXTR",
   fbPixelId: "9876543210123",
   clarityId: "clrt89abc",
+  googleSiteVerification: "google-site-verification=TRUTH_QURAN_GSC_VERIFY_2026",
   isConnected: true
 };
 

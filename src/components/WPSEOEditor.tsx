@@ -39,8 +39,17 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     externalPostId || (cmsData.blogPosts && cmsData.blogPosts.length > 0 ? cmsData.blogPosts[0].id : null)
   );
 
+  const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
+  const [saveToast, setSaveToast] = useState<string | null>(null);
+
+  // Automatically trigger new post creation if externalPostId is null
+  const hasInitializedNewRef = React.useRef(false);
+
   React.useEffect(() => {
-    if (externalPostId) {
+    if (externalPostId === null && !hasInitializedNewRef.current) {
+      hasInitializedNewRef.current = true;
+      handleAddNewPost();
+    } else if (externalPostId) {
       setSelectedPostId(externalPostId);
     }
   }, [externalPostId]);
@@ -68,10 +77,10 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
         const nextPost = { ...p, [field]: value };
         // If content changes, auto-calculate word count and reading time
         if (field === "content") {
-          const stripped = value.replace(/<[^>]*>/g, ""); // strip HTML tags
+          const stripped = (value || "").replace(/<[^>]*>/g, ""); // strip HTML tags
           const words = stripped.trim() ? stripped.trim().split(/\s+/).filter(Boolean).length : 0;
           nextPost.wordCount = words;
-          nextPost.readTime = `${Math.ceil(words / 200)} min read`;
+          nextPost.readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
         }
         return nextPost;
       }
@@ -80,44 +89,59 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     onSave({ ...cmsData, blogPosts: updated });
   };
 
+  const handleManualSave = () => {
+    if (!currentPost) return;
+    onSave({ ...cmsData });
+    setSaveToast(`Article "${currentPost.title}" saved and published successfully!`);
+    setTimeout(() => setSaveToast(null), 4000);
+  };
+
+  const insertFormatting = (snippet: string) => {
+    if (!currentPost) return;
+    const existing = currentPost.content || "";
+    handleUpdateField("content", existing + (existing ? "\n" : "") + snippet);
+  };
+
   const handleAddNewPost = () => {
     const newId = `post-${Date.now()}`;
     const newPost: BlogPost = {
       id: newId,
-      title: "Mastering the Art of Tajweed Recitation & Heartfelt Quran Connection",
-      excerpt: "An essential roadmap for beginners and intermediate students looking to master Quranic phonetics.",
+      title: "New Article Title",
+      excerpt: "Write a short summary or excerpt of your article...",
       category: "Tajweed Rules",
+      status: "draft",
       coverImage: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80",
+      imageAltText: "Article cover banner",
       author: {
         name: cmsData.developerName || "Muhammad Zain",
         avatar: cmsData.developerAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
-        role: "Scholar"
+        role: "Scholar Admin"
       },
       date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+      publishDate: new Date().toISOString().split("T")[0],
       readTime: "3 min read",
-      tags: ["Tajweed", "Quran Rules"],
-      content: "<h2>Intro to Sacred Tajweed Rules</h2><p>Reciting the Holy Quran with divine precision is a spiritual obligation. Mastering throat letters is crucial for accurate pronunciation.</p>",
-      seoTitle: "Mastering the Art of Tajweed Recitation | Quran Tutors",
-      metaTitle: "Mastering Tajweed Recitation & Quranic Articulation",
-      metaDescription: "Learn Tajweed rules step-by-step from native certified Arabic scholars. Elevate your recitation with correct Makharij articulation points.",
+      tags: ["Tajweed", "Quran"],
+      content: "<h2>Introductory Heading</h2><p>Write your article content here with HTML tags or simple text...</p>",
+      seoTitle: "New Article Title | Truth Quran Academy",
+      metaTitle: "New Article Title",
+      metaDescription: "Write a meta description between 100-160 characters for search engines...",
       focusKeyword: "Tajweed",
-      slug: "mastering-tajweed-recitation",
-      canonicalUrl: `https://truthquranacademy.com/blog/mastering-tajweed-recitation/`,
+      slug: `new-article-${Date.now().toString().slice(-4)}`,
+      canonicalUrl: `https://truthquranacademy.com/blog/new-article-${Date.now().toString().slice(-4)}/`,
       robotsMeta: "index, follow",
-      ogTitle: "Mastering Tajweed Recitation Online",
-      ogDescription: "Learn Tajweed rules step-by-step from native certified Arabic scholars. Elevate your recitation.",
+      ogTitle: "New Article Title",
+      ogDescription: "Write a summary for social media shares...",
       ogImage: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80",
       twitterCard: "summary_large_image",
-      imageAltText: "Beautiful Quran book on wooden stand",
-      wordCount: 150,
+      wordCount: 15,
       internalLinksCount: 1,
       externalLinksCount: 1,
       schemaType: "BlogPosting",
       customSchemaJson: `{
   "@context": "https://schema.org",
   "@type": "BlogPosting",
-  "headline": "Mastering the Art of Tajweed Recitation & Heartfelt Quran Connection",
-  "description": "An essential roadmap for beginners and intermediate students looking to master Quranic phonetics.",
+  "headline": "New Article Title",
+  "description": "Write a short summary or excerpt of your article...",
   "author": {
     "@type": "Person",
     "name": "Muhammad Zain"
@@ -130,9 +154,12 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
       blogPosts: [newPost, ...cmsData.blogPosts]
     });
     setSelectedPostId(newId);
+    setSaveToast("Created new draft article!");
+    setTimeout(() => setSaveToast(null), 3000);
   };
 
-  const handleDeletePost = (id: string) => {
+  const handleDeletePost = (id?: string) => {
+    if (!id) return;
     if (cmsData.blogPosts.length <= 1) {
       alert("At least one blog post must exist in the database.");
       return;
@@ -519,40 +546,90 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
 
   return (
     <div className="space-y-6 text-left" id="wp-seo-editor-section">
-      {/* Header Bar with select & buttons */}
+      
+      {/* Toast Notification Banner */}
+      {saveToast && (
+        <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded-xl flex items-center justify-between shadow-lg animate-in fade-in duration-200">
+          <div className="flex items-center space-x-2 text-xs font-bold">
+            <Check className="text-green-400 flex-shrink-0" size={16} />
+            <span>{saveToast}</span>
+          </div>
+          <button onClick={() => setSaveToast(null)} className="text-green-400 hover:text-white">
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* Header Bar with Action Controls */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b45c]/10 pb-4">
         <div className="flex items-center space-x-3">
           <div className="p-2.5 rounded-lg bg-[#d9b45c]/10 text-[#d9b45c]">
             <FileText size={20} />
           </div>
           <div>
-            <h2 className="text-lg font-serif font-bold text-white">Advanced Gutenberg Post Editor</h2>
+            <h2 className="text-lg font-serif font-bold text-white">Gutenberg & SEO Article Studio</h2>
             <div className="flex items-center space-x-2 text-[10px] text-[#c9c2ab] mt-0.5">
-              <span>Editing Article:</span>
+              <span>Select Article:</span>
               <select
                 value={selectedPostId || ""}
                 onChange={(e) => setSelectedPostId(e.target.value)}
                 className="bg-[#07080b] border border-[#d9b45c]/25 rounded px-2 py-0.5 text-[#d9b45c] text-[10px] font-sans font-bold outline-none"
               >
                 {cmsData.blogPosts.map(p => (
-                  <option key={p.id} value={p.id}>{p.title}</option>
+                  <option key={p.id} value={p.id}>
+                    {p.status === "draft" ? "📝 [DRAFT] " : p.status === "scheduled" ? "⏰ [SCHEDULED] " : "✅ "}
+                    {p.title}
+                  </option>
                 ))}
               </select>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2.5">
+        {/* Right Header Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Write / Preview Mode Toggle */}
+          <div className="bg-[#07080b] p-1 rounded-xl border border-white/10 flex items-center space-x-1">
+            <button
+              type="button"
+              onClick={() => setEditorTab("write")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-sans font-bold uppercase tracking-wider transition-all ${
+                editorTab === "write" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
+              }`}
+            >
+              Write Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditorTab("preview")}
+              className={`px-3 py-1.5 rounded-lg text-[10px] font-sans font-bold uppercase tracking-wider flex items-center space-x-1 transition-all ${
+                editorTab === "preview" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
+              }`}
+            >
+              <Eye size={12} />
+              <span>Live Preview</span>
+            </button>
+          </div>
+
+          <button
+            onClick={handleManualSave}
+            className="flex items-center space-x-1 px-4 py-2 text-[10px] font-sans font-extrabold uppercase tracking-widest text-black bg-[#d9b45c] rounded-xl hover:bg-[#f2d98a] transition-all cursor-pointer shadow-md"
+          >
+            <Check size={13} />
+            <span>Save & Publish</span>
+          </button>
+
           <button
             onClick={handleAddNewPost}
-            className="flex items-center space-x-1 px-3.5 py-2 text-[10px] font-sans font-extrabold uppercase tracking-widest text-black bg-[#d9b45c] rounded-lg hover:bg-[#f2d98a] transition-all cursor-pointer"
+            className="flex items-center space-x-1 px-3 py-2 text-[10px] font-sans font-bold uppercase tracking-wider text-[#d9b45c] border border-[#d9b45c]/30 hover:bg-[#d9b45c]/10 rounded-xl transition-all cursor-pointer"
           >
-            <Plus size={12} />
-            <span>New Post</span>
+            <Plus size={13} />
+            <span>New Article</span>
           </button>
+
           <button
             onClick={() => handleDeletePost(currentPost?.id)}
-            className="p-2 text-red-400 border border-red-500/10 hover:border-red-500/40 bg-red-500/5 hover:bg-red-500/10 rounded-lg transition-colors cursor-pointer"
+            className="p-2 text-red-400 border border-red-500/10 hover:border-red-500/40 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer"
             title="Delete active post"
           >
             <Trash2 size={14} />
@@ -563,113 +640,295 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
       {currentPost ? (
         <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
           
-          {/* LEFT COLUMN: Main Writing Space (8 cols) */}
+          {/* LEFT COLUMN: Main Writing Space or Preview (8 cols) */}
           <div className="xl:col-span-8 space-y-6">
-            <div className="space-y-4 bg-[#12141b]/50 border border-[#d9b45c]/10 rounded-2xl p-6">
-              <div className="flex items-center justify-between pb-2 border-b border-white/5">
-                <span className="text-[10px] uppercase font-sans font-bold tracking-widest text-[#d9b45c]">Gutenberg Content Builder</span>
-                <span className="text-[10px] text-[#c9c2ab]/50 font-mono">ID: {currentPost.id}</span>
-              </div>
-
-              {/* Title / Headline */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Article Headline (H1)</label>
-                <input
-                  type="text"
-                  value={currentPost.title}
-                  onChange={(e) => handleUpdateField("title", e.target.value)}
-                  className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-sans font-bold"
-                  placeholder="Enter main headline..."
-                />
-              </div>
-
-              {/* Excerpt */}
-              <div className="space-y-1">
-                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Excerpt / Short Description</label>
-                <textarea
-                  value={currentPost.excerpt}
-                  rows={2}
-                  onChange={(e) => handleUpdateField("excerpt", e.target.value)}
-                  className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2.5 text-xs text-[#c9c2ab] focus:outline-none focus:border-[#d9b45c] transition-colors resize-none leading-relaxed"
-                  placeholder="Summarize this article..."
-                />
-              </div>
-
-              {/* Main Text Body with live HTML preview */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1.5">
-                    <span>Main Article Content Body (HTML supported)</span>
-                  </label>
-                  <div className="flex items-center space-x-3 text-[9px] font-mono text-[#c9c2ab]/50 bg-[#07080b] px-2.5 py-1 rounded-md border border-white/5">
-                    <span className="flex items-center space-x-1">
-                      <Clock size={10} className="text-[#d9b45c]" />
-                      <span>{currentPost.readTime}</span>
-                    </span>
-                    <span>Words: <strong>{words}</strong></span>
-                  </div>
-                </div>
-                <textarea
-                  value={currentPost.content}
-                  rows={14}
-                  onChange={(e) => handleUpdateField("content", e.target.value)}
-                  className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-3 text-xs text-[#c9c2ab] focus:outline-none focus:border-[#d9b45c] transition-colors font-mono leading-relaxed"
-                  placeholder="Write your beautiful content with heading tags like <h2>, paragraph tags <p>, etc..."
-                />
-              </div>
-
-              {/* Featured Image URLs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
-                    <ImageIcon size={10} className="text-[#d9b45c]" />
-                    <span>Featured Image URL</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPost.coverImage}
-                    onChange={(e) => handleUpdateField("coverImage", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-mono text-[11px]"
-                    placeholder="https://..."
-                  />
+            
+            {editorTab === "preview" ? (
+              /* LIVE ARTICLE PREVIEW VIEW */
+              <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-6 md:p-8 space-y-6 text-left shadow-2xl">
+                <div className="flex items-center justify-between pb-4 border-b border-white/10 text-xs">
+                  <span className="text-[10px] uppercase font-sans font-bold tracking-widest text-[#d9b45c] bg-[#d9b45c]/10 px-2.5 py-1 rounded-full border border-[#d9b45c]/20">
+                    Live Article Preview Mode
+                  </span>
+                  <span className="text-[10px] text-[#c9c2ab] font-mono">
+                    Status: <strong className="text-green-400 uppercase">{currentPost.status || "published"}</strong>
+                  </span>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
-                    <Tag size={10} className="text-[#d9b45c]" />
-                    <span>Featured Image ALT text</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={currentPost.imageAltText || ""}
-                    onChange={(e) => handleUpdateField("imageAltText", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors"
-                    placeholder="Describe image for SEO alt text..."
-                  />
-                </div>
-              </div>
-
-              {/* Inline visual rendering of the featured image banner */}
-              {currentPost.coverImage && (
-                <div className="pt-2">
-                  <span className="text-[9px] uppercase font-sans font-bold text-[#c9c2ab]/50 block mb-1">Live Featured Image Banner Preview:</span>
-                  <div className="relative h-44 rounded-xl overflow-hidden border border-[#d9b45c]/20">
-                    <img 
-                      src={currentPost.coverImage} 
-                      alt={currentPost.imageAltText || "Featured cover banner"} 
+                {/* Preview Banner */}
+                {currentPost.coverImage && (
+                  <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden border border-[#d9b45c]/20 shadow-lg">
+                    <img
+                      src={currentPost.coverImage}
+                      alt={currentPost.imageAltText || currentPost.title}
                       className="w-full h-full object-cover"
                       referrerPolicy="no-referrer"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
-                      <div>
-                        <span className="text-[8px] uppercase tracking-wider font-bold bg-[#d9b45c] text-black px-1.5 py-0.5 rounded mr-2">{currentPost.category}</span>
-                        <h4 className="text-white text-xs font-serif font-bold mt-1 line-clamp-1">{currentPost.title}</h4>
+                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex items-end p-6">
+                      <div className="space-y-2">
+                        <span className="text-[10px] uppercase font-bold tracking-widest bg-[#d9b45c] text-black px-2 py-0.5 rounded">
+                          {currentPost.category}
+                        </span>
+                        <h1 className="text-xl md:text-2xl font-serif font-bold text-white leading-tight">
+                          {currentPost.title}
+                        </h1>
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* Author & Metadata Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-y border-white/5 text-xs text-[#c9c2ab]">
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={currentPost.author?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"}
+                      alt={currentPost.author?.name || "Author"}
+                      className="w-8 h-8 rounded-full border border-[#d9b45c]/40 object-cover"
+                    />
+                    <div>
+                      <span className="font-bold text-white block leading-tight">{currentPost.author?.name || "Muhammad Zain"}</span>
+                      <span className="text-[9px] text-[#d9b45c]">{currentPost.author?.role || "Scholar Admin"}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4 text-[10px] font-mono">
+                    <span>Published: {currentPost.publishDate || currentPost.date}</span>
+                    <span>Read Time: {currentPost.readTime || "3 min read"}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                {/* Excerpt */}
+                {currentPost.excerpt && (
+                  <p className="text-sm italic text-[#d9b45c] bg-[#07080b] p-4 rounded-xl border-l-4 border-[#d9b45c] leading-relaxed font-serif">
+                    "{currentPost.excerpt}"
+                  </p>
+                )}
+
+                {/* Formatted Article Content Body */}
+                <div 
+                  className="prose prose-invert max-w-none text-xs leading-relaxed space-y-4 text-[#c9c2ab] font-sans"
+                  dangerouslySetInnerHTML={{ __html: currentPost.content || "<p>No content entered yet.</p>" }}
+                />
+
+                {/* Tags list */}
+                {currentPost.tags && currentPost.tags.length > 0 && (
+                  <div className="pt-4 border-t border-white/5 flex items-center space-x-2">
+                    <span className="text-[10px] font-bold text-[#c9c2ab] uppercase">Tags:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {currentPost.tags.map((tag, idx) => (
+                        <span key={idx} className="bg-[#d9b45c]/10 text-[#f2d98a] border border-[#d9b45c]/20 text-[10px] px-2 py-0.5 rounded-full font-sans font-bold">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* WRITE EDITOR VIEW */
+              <div className="space-y-4 bg-[#12141b]/50 border border-[#d9b45c]/10 rounded-2xl p-6">
+                
+                {/* Status & Metadata Bar */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b border-white/5">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Publish Status</label>
+                    <select
+                      value={currentPost.status || "published"}
+                      onChange={(e) => handleUpdateField("status", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-[#d9b45c]"
+                    >
+                      <option value="published">🟢 Published</option>
+                      <option value="draft">🟡 Draft (Private)</option>
+                      <option value="scheduled">🔵 Scheduled</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Author</label>
+                    <input
+                      type="text"
+                      value={currentPost.author?.name || "Muhammad Zain"}
+                      onChange={(e) => handleUpdateField("author", { ...currentPost.author, name: e.target.value })}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-[#d9b45c]"
+                      placeholder="e.g. Muhammad Zain"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Publish Date</label>
+                    <input
+                      type="date"
+                      value={currentPost.publishDate || "2026-07-20"}
+                      onChange={(e) => {
+                        handleUpdateField("publishDate", e.target.value);
+                        handleUpdateField("date", e.target.value);
+                      }}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-[#d9b45c]"
+                    />
+                  </div>
+                </div>
+
+                {/* Title / Headline */}
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Article Headline (H1 Title)</label>
+                  <input
+                    type="text"
+                    value={currentPost.title}
+                    onChange={(e) => handleUpdateField("title", e.target.value)}
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-sans font-bold"
+                    placeholder="Enter main headline..."
+                  />
+                </div>
+
+                {/* Excerpt */}
+                <div className="space-y-1">
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Excerpt / Summary Description</label>
+                  <textarea
+                    value={currentPost.excerpt}
+                    rows={2}
+                    onChange={(e) => handleUpdateField("excerpt", e.target.value)}
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2.5 text-xs text-[#c9c2ab] focus:outline-none focus:border-[#d9b45c] transition-colors resize-none leading-relaxed"
+                    placeholder="Summarize this article..."
+                  />
+                </div>
+
+                {/* Main Text Body with Rich Text Formatting Toolbar */}
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1.5">
+                      <span>Article Content Body</span>
+                    </label>
+
+                    {/* Rich Text Toolbar Buttons */}
+                    <div className="flex flex-wrap items-center gap-1 bg-[#07080b] p-1 rounded-lg border border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<h2>Section Heading</h2>")}
+                        className="px-2 py-0.5 text-[9px] font-bold text-[#d9b45c] hover:bg-white/10 rounded"
+                        title="Add Heading H2"
+                      >
+                        H2
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<h3>Subheading Title</h3>")}
+                        className="px-2 py-0.5 text-[9px] font-bold text-[#d9b45c] hover:bg-white/10 rounded"
+                        title="Add Subheading H3"
+                      >
+                        H3
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<b>Bold Text</b>")}
+                        className="px-2 py-0.5 text-[9px] font-bold text-white hover:bg-white/10 rounded"
+                        title="Add Bold Text"
+                      >
+                        B
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<i>Italic Text</i>")}
+                        className="px-2 py-0.5 text-[9px] italic text-white hover:bg-white/10 rounded"
+                        title="Add Italic Text"
+                      >
+                        I
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting('<blockquote className="border-l-4 border-[#d9b45c] pl-4 italic bg-[#07080b] p-3 rounded-r-lg my-3 font-serif text-white">"Quranic verse or scholar quote"</blockquote>')}
+                        className="px-2 py-0.5 text-[9px] font-bold text-green-400 hover:bg-white/10 rounded"
+                        title="Add Quranic Verse / Quote"
+                      >
+                        Verse Block
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting("<ul>\n  <li>Key point 1</li>\n  <li>Key point 2</li>\n</ul>")}
+                        className="px-2 py-0.5 text-[9px] font-bold text-blue-400 hover:bg-white/10 rounded"
+                        title="Add Bulleted List"
+                      >
+                        List
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => insertFormatting('<img src="https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80" alt="Illustration" className="w-full rounded-xl my-4" />')}
+                        className="px-2 py-0.5 text-[9px] font-bold text-yellow-400 hover:bg-white/10 rounded"
+                        title="Add Inline Image"
+                      >
+                        Image
+                      </button>
+                    </div>
+
+                    <div className="flex items-center space-x-3 text-[9px] font-mono text-[#c9c2ab]/50 bg-[#07080b] px-2.5 py-1 rounded-md border border-white/5">
+                      <span className="flex items-center space-x-1">
+                        <Clock size={10} className="text-[#d9b45c]" />
+                        <span>{currentPost.readTime}</span>
+                      </span>
+                      <span>Words: <strong>{words}</strong></span>
+                    </div>
+                  </div>
+
+                  <textarea
+                    value={currentPost.content}
+                    rows={14}
+                    onChange={(e) => handleUpdateField("content", e.target.value)}
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-3 text-xs text-[#c9c2ab] focus:outline-none focus:border-[#d9b45c] transition-colors font-mono leading-relaxed"
+                    placeholder="Write your content with heading tags <h2>, paragraph tags <p>, verse quotes, lists..."
+                  />
+                </div>
+
+                {/* Featured Image URL & ALT text */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
+                      <ImageIcon size={10} className="text-[#d9b45c]" />
+                      <span>Featured Image URL</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={currentPost.coverImage}
+                      onChange={(e) => handleUpdateField("coverImage", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-mono text-[11px]"
+                      placeholder="https://..."
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
+                      <Tag size={10} className="text-[#d9b45c]" />
+                      <span>Featured Image ALT Text (SEO)</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={currentPost.imageAltText || ""}
+                      onChange={(e) => handleUpdateField("imageAltText", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors"
+                      placeholder="Describe image for SEO alt text..."
+                    />
+                  </div>
+                </div>
+
+                {/* Inline visual rendering of the featured image banner */}
+                {currentPost.coverImage && (
+                  <div className="pt-2">
+                    <span className="text-[9px] uppercase font-sans font-bold text-[#c9c2ab]/50 block mb-1">Featured Cover Image Banner:</span>
+                    <div className="relative h-44 rounded-xl overflow-hidden border border-[#d9b45c]/20">
+                      <img 
+                        src={currentPost.coverImage} 
+                        alt={currentPost.imageAltText || "Featured cover banner"} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                        <div>
+                          <span className="text-[8px] uppercase tracking-wider font-bold bg-[#d9b45c] text-black px-1.5 py-0.5 rounded mr-2">{currentPost.category}</span>
+                          <h4 className="text-white text-xs font-serif font-bold mt-1 line-clamp-1">{currentPost.title}</h4>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RIGHT COLUMN: THE SEO SIDEBAR (Yoast / Rank Math Pro Style) (4 cols) */}

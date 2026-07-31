@@ -68,8 +68,8 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
   // Authentication & Security States
   const [sessionUser, setSessionUser] = useState<any | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
-  const [loginEmail, setLoginEmail] = useState("muhammadzain92624@gmail.com");
-  const [loginPassword, setLoginPassword] = useState("MuhammadZain786..");
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [lostPasswordRequested, setLostPasswordRequested] = useState(false);
@@ -241,7 +241,7 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
                         setLoginEmail(e.target.value);
                         setLoginError("");
                       }}
-                      placeholder="muhammadzain92624@gmail.com"
+                      placeholder="Username or email address"
                       className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded p-3 text-xs text-white font-semibold outline-none focus:border-[#d9b45c] focus:ring-1 focus:ring-[#d9b45c] transition-all"
                     />
                   </div>
