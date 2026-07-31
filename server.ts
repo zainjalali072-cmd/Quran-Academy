@@ -676,6 +676,53 @@ Sitemap: https://truthquranacademy.com/sitemap.xml`;
   res.send(content);
 });
 
+// Helper to clean verification codes
+function getCleanVerificationCode(val?: string): string {
+  if (!val) return "";
+  const str = String(val).trim();
+  const contentMatch = str.match(/content=["']([^"']+)["']/i);
+  if (contentMatch && contentMatch[1]) return contentMatch[1].trim();
+  if (str.includes("google-site-verification=")) {
+    return str.replace(/^google-site-verification=/, "").trim();
+  }
+  return str;
+}
+
+// Dynamically inject SEO verification meta tags directly into HTML head
+function injectSeoMetaTags(html: string): string {
+  try {
+    const db = getDatabase();
+    const rawGsc = db.integrations?.googleSiteVerification || db.integrations?.gscId || "TRUTH_QURAN_GSC_VERIFY_2026";
+    const gscCode = getCleanVerificationCode(rawGsc) || "TRUTH_QURAN_GSC_VERIFY_2026";
+    
+    const gscMetaTag = `<meta name="google-site-verification" content="${gscCode}" />`;
+    
+    if (html.includes('name="google-site-verification"')) {
+      html = html.replace(/<meta\s+name=["']google-site-verification["']\s+content=["'][^"']*["']\s*\/?>/gi, gscMetaTag);
+    } else {
+      html = html.replace("</head>", `  ${gscMetaTag}\n</head>`);
+    }
+
+    const rawBing = db.integrations?.bingSiteVerification;
+    const bingCode = getCleanVerificationCode(rawBing);
+    if (bingCode) {
+      const bingTag = `<meta name="msvalidate.01" content="${bingCode}" />`;
+      if (html.includes('name="msvalidate.01"')) {
+        html = html.replace(/<meta\s+name=["']msvalidate\.01["']\s+content=["'][^"']*["']\s*\/?>/gi, bingTag);
+      } else {
+        html = html.replace("</head>", `  ${bingTag}\n</head>`);
+      }
+    }
+
+    if (db.integrations?.customHeadScripts) {
+      html = html.replace("</head>", `  ${db.integrations.customHeadScripts}\n</head>`);
+    }
+  } catch (err) {
+    console.error("Error injecting SEO meta tags:", err);
+  }
+  return html;
+}
+
 // Vite Middleware for dev or serving statics in production
 const startServer = async () => {
   if (process.env.NODE_ENV !== "production") {
@@ -683,6 +730,7 @@ const startServer = async () => {
       server: { middlewareMode: true },
       appType: "spa"
     });
+
     app.use(vite.middlewares);
   } else {
     let distPath = path.join(process.cwd(), "dist");
@@ -691,7 +739,14 @@ const startServer = async () => {
     }
     app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
+      try {
+        const indexPath = path.join(distPath, "index.html");
+        let html = fs.readFileSync(indexPath, "utf-8");
+        html = injectSeoMetaTags(html);
+        res.status(200).set({ "Content-Type": "text/html" }).end(html);
+      } catch {
+        res.sendFile(path.join(distPath, "index.html"));
+      }
     });
   }
 
