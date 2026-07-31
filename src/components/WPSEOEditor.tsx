@@ -89,10 +89,23 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     onSave({ ...cmsData, blogPosts: updated });
   };
 
-  const handleManualSave = () => {
+  const handleManualSave = (publishState: "published" | "draft" = "published") => {
     if (!currentPost) return;
-    onSave({ ...cmsData });
-    setSaveToast(`Article "${currentPost.title}" saved and published successfully!`);
+    const targetStatus: BlogPost["status"] = currentPost.status === "scheduled" ? "scheduled" : publishState;
+    const updated: BlogPost[] = cmsData.blogPosts.map(p => {
+      if (p.id === currentPost.id) {
+        return { 
+          ...p, 
+          status: targetStatus,
+          publishDate: p.publishDate || new Date().toISOString().split("T")[0],
+          date: p.date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+        };
+      }
+      return p;
+    });
+    onSave({ ...cmsData, blogPosts: updated });
+    const statusMsg = targetStatus === "published" ? "published live to website" : targetStatus === "draft" ? "saved as draft" : "saved as scheduled";
+    setSaveToast(`Article "${currentPost.title}" ${statusMsg} successfully!`);
     setTimeout(() => setSaveToast(null), 4000);
   };
 
@@ -612,11 +625,19 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
           </div>
 
           <button
-            onClick={handleManualSave}
+            onClick={() => handleManualSave("published")}
             className="flex items-center space-x-1 px-4 py-2 text-[10px] font-sans font-extrabold uppercase tracking-widest text-black bg-[#d9b45c] rounded-xl hover:bg-[#f2d98a] transition-all cursor-pointer shadow-md"
           >
             <Check size={13} />
             <span>Save & Publish</span>
+          </button>
+
+          <button
+            onClick={() => handleManualSave("draft")}
+            className="flex items-center space-x-1 px-3 py-2 text-[10px] font-sans font-bold uppercase tracking-wider text-[#c9c2ab] border border-white/10 hover:border-white/20 hover:text-white bg-[#07080b] rounded-xl transition-all cursor-pointer"
+          >
+            <FileText size={12} />
+            <span>Save Draft</span>
           </button>
 
           <button
