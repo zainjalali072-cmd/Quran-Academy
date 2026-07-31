@@ -147,10 +147,11 @@
   "videos": [],
   "integrations": {
     "ga4Id": "G-TRUTHQURAN123",
-    "gscId": "sc-truthquranacademy.com",
+    "gscId": "lTvdLgKMilv0Fo4K8WKaSBqGWsZyrSgLKqSl4yj3I4g",
     "gtmId": "GTM-P8QXTR",
     "fbPixelId": "9876543210123",
     "clarityId": "clrt89abc",
+    "googleSiteVerification": "lTvdLgKMilv0Fo4K8WKaSBqGWsZyrSgLKqSl4yj3I4g",
     "isConnected": true
   },
   "sectionsVisibility": {
@@ -37941,6 +37942,186 @@
     {
       "timestamp": "2026-07-29T13:53:02.336Z",
       "ip": "116.90.119.251, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T05:47:02.899Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T05:47:02.938Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T05:48:13.036Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T05:48:13.069Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T05:50:29.835Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T05:50:29.890Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:01:06.265Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:01:06.659Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:02:53.691Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:02:53.760Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:07:45.510Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:07:45.858Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:36:09.333Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T06:36:09.393Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T07:01:30.096Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T07:01:30.134Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T07:24:25.863Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T07:24:25.905Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T07:28:15.811Z",
+      "ip": "103.115.199.164, 169.254.169.126",
+      "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-07-31T07:28:16.183Z",
+      "ip": "103.115.199.164, 169.254.169.126",
       "country": "US",
       "browser": "Chrome",
       "device": "Desktop",
