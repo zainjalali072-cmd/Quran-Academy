@@ -60,7 +60,7 @@ interface WPSimulatorProps {
 export default function WPSimulator({ onClose }: WPSimulatorProps) {
   const [isOpen, setIsOpen] = useState(true);
   const [activeTab, setActiveTab] = useState<
-    "dashboard" | "posts" | "pages" | "media" | "videos" | "comments" | "customizer" | "rankmath" | "users" | "settings" | "tools" | "theme" | "courses" | "teachers" | "testimonials" | "faqs" | "services" | "pricing"
+    "dashboard" | "posts" | "pages" | "media" | "videos" | "comments" | "customizer" | "rankmath" | "seo-settings" | "users" | "settings" | "tools" | "theme" | "courses" | "teachers" | "testimonials" | "faqs" | "services" | "pricing"
   >("dashboard");
   const [cmsData, setCmsData] = useState<CMSData>(getCMSData());
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -546,6 +546,14 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
                     >
                       <Compass size={14} />
                       <span>Rank Math SEO</span>
+                    </button>
+
+                    <button 
+                      onClick={() => setActiveTab("seo-settings")}
+                      className={`w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs font-sans font-bold uppercase tracking-wider transition-all text-left ${activeTab === "seo-settings" ? "bg-[#d9b45c]/10 text-[#f2d98a] border-l-2 border-[#d9b45c]" : "text-[#c9c2ab] hover:bg-[#d9b45c]/5 hover:text-[#f3ecd8]"}`}
+                    >
+                      <Globe size={14} />
+                      <span>SEO Settings</span>
                     </button>
 
                     <button 
@@ -1080,6 +1088,246 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
                       </div>
                     )}
 
+                  </div>
+                )}
+
+                {/* TAB: SEO SETTINGS & MASTER VERIFICATIONS */}
+                {activeTab === "seo-settings" && (
+                  <div className="space-y-6 text-left animate-in fade-in duration-200">
+                    <div className="border-b border-[#d9b45c]/15 pb-3 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <Globe className="text-[#d9b45c]" size={22} />
+                          <h2 className="font-serif text-xl text-[#f3ecd8] font-bold">WordPress SEO Settings & Master Verifications</h2>
+                        </div>
+                        <p className="text-xs text-[#c9c2ab] mt-1 font-sans">
+                          Manage site-wide webmaster tool verification tags, Google Search Console, analytics IDs, and custom &lt;head&gt; scripts.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSave({ ...cmsData });
+                        }}
+                        className="px-5 py-2.5 bg-[#d9b45c] text-black hover:bg-[#f2d98a] text-xs font-sans font-extrabold uppercase tracking-wider rounded-lg transition-all shadow-md flex items-center justify-center space-x-2 cursor-pointer"
+                      >
+                        <CheckCircle2 size={14} />
+                        <span>Save SEO Settings</span>
+                      </button>
+                    </div>
+
+                    {/* Search Console & Webmaster Tools Block */}
+                    <div className="bg-[#12141b] border border-[#d9b45c]/15 rounded-xl p-6 space-y-6">
+                      <div className="border-b border-[#d9b45c]/10 pb-3 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-sans font-bold text-[#d9b45c] uppercase tracking-wider block">Webmaster Verification Tools</span>
+                          <p className="text-[11px] text-[#c9c2ab] mt-0.5 font-sans">
+                            Pasting verification codes below will automatically insert the corresponding &lt;meta&gt; verification tags inside the &lt;head&gt; section of every page.
+                          </p>
+                        </div>
+                        <ShieldCheck className="text-[#d9b45c]/40 hidden sm:block" size={24} />
+                      </div>
+
+                      <div className="space-y-5">
+                        {/* Google Search Console Field */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label htmlFor="gsc-field" className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                              <span>Google Search Console Verification Code</span>
+                            </label>
+                            <span className="text-[10px] text-[#d9b45c] font-mono bg-[#d9b45c]/10 px-2 py-0.5 rounded border border-[#d9b45c]/20">
+                              google-site-verification
+                            </span>
+                          </div>
+                          
+                          <input
+                            id="gsc-field"
+                            type="text"
+                            value={cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updatedIntegrations = {
+                                ...(cmsData.integrations || {}),
+                                googleSiteVerification: val,
+                                gscId: val
+                              };
+                              handleSave({ ...cmsData, integrations: updatedIntegrations });
+                            }}
+                            placeholder="e.g. TRUTH_QURAN_GSC_VERIFY_2026 or <meta name=&quot;google-site-verification&quot; content=&quot;...&quot; />"
+                            className="w-full bg-[#07080b] border border-[#d9b45c]/25 rounded-lg p-3 text-xs text-white font-mono placeholder:text-gray-600 outline-none focus:border-[#d9b45c] focus:ring-1 focus:ring-[#d9b45c] transition-all"
+                          />
+
+                          {/* Generated Meta Tag Live Preview Box */}
+                          <div className="bg-[#07080b]/60 border border-white/10 rounded-lg p-3 space-y-1 font-mono text-[11px]">
+                            <span className="text-[9px] text-[#c9c2ab]/60 uppercase font-sans font-bold block">Auto-Injected &lt;head&gt; Meta Tag Preview:</span>
+                            <code className="text-green-400 block break-all">
+                              {`<meta name="google-site-verification" content="${
+                                (cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId || "")
+                                  .replace(/<meta[^>]*content=["']([^"']+)["'][^>]*>/i, "$1")
+                                  .replace(/^google-site-verification=/, "") || "YOUR_CODE"
+                              }" />`}
+                            </code>
+                          </div>
+                        </div>
+
+                        {/* Bing Webmaster Tools Field */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <label htmlFor="bing-field" className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                              <span className="w-2 h-2 rounded-full bg-teal-400"></span>
+                              <span>Bing Webmaster Tools</span>
+                            </label>
+                            <span className="text-[10px] text-[#d9b45c] font-mono bg-[#d9b45c]/10 px-2 py-0.5 rounded border border-[#d9b45c]/20">
+                              msvalidate.01
+                            </span>
+                          </div>
+                          
+                          <input
+                            id="bing-field"
+                            type="text"
+                            value={cmsData.integrations?.bingSiteVerification || ""}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const updatedIntegrations = {
+                                ...(cmsData.integrations || {}),
+                                bingSiteVerification: val
+                              };
+                              handleSave({ ...cmsData, integrations: updatedIntegrations });
+                            }}
+                            placeholder="e.g. MS_VALIDATE_TRUTH_QURAN_2026"
+                            className="w-full bg-[#07080b] border border-[#d9b45c]/25 rounded-lg p-3 text-xs text-white font-mono placeholder:text-gray-600 outline-none focus:border-[#d9b45c] focus:ring-1 focus:ring-[#d9b45c] transition-all"
+                          />
+
+                          <div className="bg-[#07080b]/60 border border-white/10 rounded-lg p-3 space-y-1 font-mono text-[11px]">
+                            <span className="text-[9px] text-[#c9c2ab]/60 uppercase font-sans font-bold block">Auto-Injected &lt;head&gt; Meta Tag Preview:</span>
+                            <code className="text-teal-400 block break-all">
+                              {`<meta name="msvalidate.01" content="${
+                                (cmsData.integrations?.bingSiteVerification || "")
+                                  .replace(/<meta[^>]*content=["']([^"']+)["'][^>]*>/i, "$1")
+                                  .replace(/^msvalidate\.01=/, "") || "YOUR_CODE"
+                              }" />`}
+                            </code>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Analytics & Tracking IDs Block */}
+                    <div className="bg-[#12141b] border border-[#d9b45c]/15 rounded-xl p-6 space-y-6">
+                      <div className="border-b border-[#d9b45c]/10 pb-3">
+                        <span className="text-xs font-sans font-bold text-[#d9b45c] uppercase tracking-wider block">Analytics & Pixel Trackers</span>
+                        <p className="text-[11px] text-[#c9c2ab] mt-0.5 font-sans">
+                          Connect tracking measurement IDs for Google Analytics (GA4), Google Tag Manager, and Facebook Pixel.
+                        </p>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                        {/* GA4 */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="ga4-field" className="text-xs font-sans font-bold text-white uppercase tracking-wider block">Google Analytics (GA4)</label>
+                          <input
+                            id="ga4-field"
+                            type="text"
+                            value={cmsData.integrations?.ga4Id || ""}
+                            onChange={(e) => {
+                              const updatedIntegrations = {
+                                ...(cmsData.integrations || {}),
+                                ga4Id: e.target.value
+                              };
+                              handleSave({ ...cmsData, integrations: updatedIntegrations });
+                            }}
+                            placeholder="e.g. G-TRUTHQURAN123"
+                            className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg p-2.5 text-xs text-white font-mono outline-none focus:border-[#d9b45c]"
+                          />
+                          <span className="text-[10px] text-[#c9c2ab]/60 block font-sans">Measurement ID (e.g. G-XXXXXXXXXX)</span>
+                        </div>
+
+                        {/* GTM */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="gtm-field" className="text-xs font-sans font-bold text-white uppercase tracking-wider block">Google Tag Manager</label>
+                          <input
+                            id="gtm-field"
+                            type="text"
+                            value={cmsData.integrations?.gtmId || ""}
+                            onChange={(e) => {
+                              const updatedIntegrations = {
+                                ...(cmsData.integrations || {}),
+                                gtmId: e.target.value
+                              };
+                              handleSave({ ...cmsData, integrations: updatedIntegrations });
+                            }}
+                            placeholder="e.g. GTM-P8QXTR"
+                            className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg p-2.5 text-xs text-white font-mono outline-none focus:border-[#d9b45c]"
+                          />
+                          <span className="text-[10px] text-[#c9c2ab]/60 block font-sans">Container ID (e.g. GTM-XXXXXX)</span>
+                        </div>
+
+                        {/* FB Pixel */}
+                        <div className="space-y-1.5">
+                          <label htmlFor="fbpixel-field" className="text-xs font-sans font-bold text-white uppercase tracking-wider block">Facebook Pixel</label>
+                          <input
+                            id="fbpixel-field"
+                            type="text"
+                            value={cmsData.integrations?.fbPixelId || ""}
+                            onChange={(e) => {
+                              const updatedIntegrations = {
+                                ...(cmsData.integrations || {}),
+                                fbPixelId: e.target.value
+                              };
+                              handleSave({ ...cmsData, integrations: updatedIntegrations });
+                            }}
+                            placeholder="e.g. 9876543210123"
+                            className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg p-2.5 text-xs text-white font-mono outline-none focus:border-[#d9b45c]"
+                          />
+                          <span className="text-[10px] text-[#c9c2ab]/60 block font-sans">Meta Pixel ID (e.g. 15-digit ID)</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom Head Scripts Block */}
+                    <div className="bg-[#12141b] border border-[#d9b45c]/15 rounded-xl p-6 space-y-4">
+                      <div className="border-b border-[#d9b45c]/10 pb-3">
+                        <span className="text-xs font-sans font-bold text-[#d9b45c] uppercase tracking-wider block">Custom Head Scripts</span>
+                        <p className="text-[11px] text-[#c9c2ab] mt-0.5 font-sans">
+                          Insert raw HTML, JavaScript snippets, or additional verification meta tags to be injected inside the &lt;head&gt; element.
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <textarea
+                          rows={4}
+                          value={cmsData.integrations?.customHeadScripts || ""}
+                          onChange={(e) => {
+                            const updatedIntegrations = {
+                              ...(cmsData.integrations || {}),
+                              customHeadScripts: e.target.value
+                            };
+                            handleSave({ ...cmsData, integrations: updatedIntegrations });
+                          }}
+                          placeholder="<!-- Custom Head Tracking / Verification Snippets -->"
+                          className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg p-3 text-xs text-emerald-400 font-mono leading-relaxed outline-none focus:border-[#d9b45c]"
+                        />
+                        <span className="text-[10px] text-[#c9c2ab]/60 block font-sans">
+                          Supports &lt;script&gt;, &lt;meta&gt;, and &lt;link&gt; tag definitions.
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom Action bar */}
+                    <div className="flex justify-end pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSave({ ...cmsData });
+                        }}
+                        className="px-6 py-3 bg-[#d9b45c] text-black hover:bg-[#f2d98a] text-xs font-sans font-extrabold uppercase tracking-widest rounded-xl transition-all shadow-lg flex items-center space-x-2 cursor-pointer"
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>Save SEO Settings</span>
+                      </button>
+                    </div>
                   </div>
                 )}
 

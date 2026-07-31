@@ -129,6 +129,8 @@ export interface CMSData {
     fbPixelId: string;
     clarityId: string;
     googleSiteVerification?: string;
+    bingSiteVerification?: string;
+    customHeadScripts?: string;
     isConnected: boolean;
   };
   robotsTxtContent?: string;
@@ -394,11 +396,13 @@ export const DEFAULT_VIDEOS: WPVideo[] = [
 
 export const DEFAULT_INTEGRATIONS = {
   ga4Id: "G-TRUTHQURAN123",
-  gscId: "sc-truthquranacademy.com",
+  gscId: "TRUTH_QURAN_GSC_VERIFY_2026",
   gtmId: "GTM-P8QXTR",
   fbPixelId: "9876543210123",
   clarityId: "clrt89abc",
-  googleSiteVerification: "google-site-verification=TRUTH_QURAN_GSC_VERIFY_2026",
+  googleSiteVerification: "TRUTH_QURAN_GSC_VERIFY_2026",
+  bingSiteVerification: "MS_VALIDATE_TRUTH_QURAN_2026",
+  customHeadScripts: "<!-- Google & Analytics Master Verification Tags -->",
   isConnected: true
 };
 

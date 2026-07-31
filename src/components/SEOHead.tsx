@@ -124,15 +124,59 @@ export default function SEOHead({ cmsData, currentView, activePostId }: SEOHeadP
       element.textContent = JSON.stringify(jsonObj, null, 2);
     };
 
+    // Clean code helper (handles raw code, key=value, or <meta ... content="VALUE" />)
+    const cleanVerificationCode = (val?: string): string => {
+      if (!val) return "";
+      const str = String(val).trim();
+      const contentMatch = str.match(/content=["']([^"']+)["']/i);
+      if (contentMatch && contentMatch[1]) return contentMatch[1].trim();
+      if (str.includes("google-site-verification=")) {
+        return str.replace(/^google-site-verification=/, "").trim();
+      }
+      return str;
+    };
+
     // 3. Inject Meta Tags
     setMetaTag("name", "description", description);
     setMetaTag("name", "keywords", getMetaStr(cmsData.seoSettings?.metaKeywords, "online quran class, tajweed rules, hifz course, quran tutor"));
     setMetaTag("name", "robots", getMetaStr(cmsData.seoSettings?.robotsDirective, "index, follow"));
 
     // Google Search Console Verification code
-    const gscTag = cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId;
-    if (gscTag) {
-      setMetaTag("name", "google-site-verification", gscTag);
+    const rawGsc = cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId;
+    const gscCode = cleanVerificationCode(rawGsc);
+    if (gscCode) {
+      setMetaTag("name", "google-site-verification", gscCode);
+    }
+
+    // Bing Webmaster Tools Verification code
+    const rawBing = cmsData.integrations?.bingSiteVerification;
+    const bingCode = cleanVerificationCode(rawBing);
+    if (bingCode) {
+      setMetaTag("name", "msvalidate.01", bingCode);
+    }
+
+    // Google Analytics (GA4)
+    if (cmsData.integrations?.ga4Id) {
+      const gaId = cleanVerificationCode(cmsData.integrations.ga4Id);
+      if (gaId) {
+        setMetaTag("name", "google-analytics-id", gaId);
+      }
+    }
+
+    // Google Tag Manager
+    if (cmsData.integrations?.gtmId) {
+      const gtmId = cleanVerificationCode(cmsData.integrations.gtmId);
+      if (gtmId) {
+        setMetaTag("name", "google-tag-manager-id", gtmId);
+      }
+    }
+
+    // Facebook Pixel
+    if (cmsData.integrations?.fbPixelId) {
+      const fbId = cleanVerificationCode(cmsData.integrations.fbPixelId);
+      if (fbId) {
+        setMetaTag("name", "facebook-pixel-id", fbId);
+      }
     }
 
     // Open Graph
