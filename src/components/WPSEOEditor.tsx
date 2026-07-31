@@ -30,7 +30,7 @@ import {
 
 interface WPSEOEditorProps {
   cmsData: CMSData;
-  onSave: (updatedData: CMSData) => void;
+  onSave: (updatedData: CMSData, customMsg?: string) => void;
   externalPostId?: string | null;
 }
 
@@ -103,9 +103,10 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
       }
       return p;
     });
-    onSave({ ...cmsData, blogPosts: updated });
     const statusMsg = targetStatus === "published" ? "published live to website" : targetStatus === "draft" ? "saved as draft" : "saved as scheduled";
-    setSaveToast(`Article "${currentPost.title}" ${statusMsg} successfully!`);
+    const msg = `✅ Article "${currentPost.title}" ${statusMsg} successfully!`;
+    onSave({ ...cmsData, blogPosts: updated }, msg);
+    setSaveToast(msg);
     setTimeout(() => setSaveToast(null), 4000);
   };
 

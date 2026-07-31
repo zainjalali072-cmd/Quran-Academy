@@ -7,7 +7,7 @@ interface WPMediaLibraryModalProps {
   onClose: () => void;
   mediaLibrary: WPMedia[];
   onSelect: (imageDetails: { url: string; alt: string; title: string; caption?: string; description?: string }) => void;
-  onSaveMediaLibrary: (updatedMedia: WPMedia[]) => void;
+  onSaveMediaLibrary: (updatedMedia: WPMedia[], customMsg?: string) => void;
   title?: string;
   defaultCropAspect?: "1:1" | "16:9" | "4:3" | "free";
 }
@@ -259,7 +259,7 @@ export const WPMediaLibraryModal: React.FC<WPMediaLibraryModalProps> = ({
     e.stopPropagation();
     if (confirm("Are you sure you want to permanently delete this asset from the Media Library database? This will break any dynamic paths using it.")) {
       const updated = mediaLibrary.filter(item => item.id !== id);
-      onSaveMediaLibrary(updated);
+      onSaveMediaLibrary(updated, "✅ Media asset deleted from library successfully!");
       if (selectedMediaId === id) {
         setSelectedMediaId(null);
       }
@@ -281,8 +281,7 @@ export const WPMediaLibraryModal: React.FC<WPMediaLibraryModalProps> = ({
       }
       return item;
     });
-    onSaveMediaLibrary(updated);
-    alert("Media SEO metadata saved successfully!");
+    onSaveMediaLibrary(updated, "✅ Media SEO metadata saved & updated successfully!");
   };
 
   // Confirm image selection
@@ -323,7 +322,7 @@ export const WPMediaLibraryModal: React.FC<WPMediaLibraryModalProps> = ({
     };
 
     const updated = [newMediaItem, ...mediaLibrary];
-    onSaveMediaLibrary(updated);
+    onSaveMediaLibrary(updated, "✅ Asset optimized & saved to Media Library successfully!");
     
     // Select the newly cropped image
     onSelect({

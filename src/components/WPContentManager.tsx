@@ -45,7 +45,7 @@ import { WPMediaLibraryModal } from "./WPMediaLibraryModal";
 
 interface WPContentManagerProps {
   cmsData: CMSData;
-  onSave: (updatedData: CMSData) => void;
+  onSave: (updatedData: CMSData, customMsg?: string) => void;
   activeTab: string;
   setActiveTab: (tab: any) => void;
 }
@@ -381,7 +381,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
       updatedList = [...duplicates, ...updatedList];
     }
 
-    onSave({ ...cmsData, [key]: updatedList });
+    onSave({ ...cmsData, [key]: updatedList }, `✅ Bulk action "${bulkAction}" applied successfully to ${selectedRowIds.length} item(s)!`);
     setSelectedRowIds([]);
     setBulkAction("");
   };
@@ -400,7 +400,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
     const updated = items.map((item: any) => 
       item.id === id ? { ...item, status: "trash" } : item
     );
-    onSave({ ...cmsData, [key]: updated });
+    onSave({ ...cmsData, [key]: updated }, "✅ Item moved to trash successfully.");
   };
 
   const handleRestoreItem = (id: string) => {
@@ -411,7 +411,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
     const updated = items.map((item: any) => 
       item.id === id ? { ...item, status: "published" } : item
     );
-    onSave({ ...cmsData, [key]: updated });
+    onSave({ ...cmsData, [key]: updated }, "✅ Item restored live to website!");
   };
 
   const handlePermanentDeleteItem = (id: string) => {
@@ -421,7 +421,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
 
       const items = (cmsData as any)[key] || [];
       const updated = items.filter((item: any) => item.id !== id);
-      onSave({ ...cmsData, [key]: updated });
+      onSave({ ...cmsData, [key]: updated }, "✅ Item permanently deleted from database!");
     }
   };
 
@@ -449,7 +449,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
       publishDate: new Date().toISOString().split("T")[0]
     };
 
-    onSave({ ...cmsData, [key]: [duplicate, ...items] });
+    onSave({ ...cmsData, [key]: [duplicate, ...items] }, "✅ Item duplicated successfully as Draft!");
   };
 
   // Launch Full Editor view
@@ -527,7 +527,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
     if (activeTab === "pages") {
       // Save static pages
       const nextVis = { ...cmsData.sectionsVisibility, [formData.id]: formData.status === "published" };
-      onSave({ ...cmsData, sectionsVisibility: nextVis });
+      onSave({ ...cmsData, sectionsVisibility: nextVis }, `✅ Page "${formData.title}" visibility updated!`);
       setSubView("all");
       setEditingItemId(null);
       return;
@@ -546,7 +546,9 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
       items = [{ id: newId, ...formData, status: formData.status || "published", date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }), publishDate: new Date().toISOString().split("T")[0] }, ...items];
     }
 
-    onSave({ ...cmsData, [key]: items });
+    const itemLabel = currentConfig?.singular || "Item";
+    const actionLabel = editingItemId ? "updated" : "created & published";
+    onSave({ ...cmsData, [key]: items }, `✅ ${itemLabel} "${formData.title || formData.name || formData.question || ''}" ${actionLabel} successfully!`);
     setSubView("all");
     setEditingItemId(null);
   };
@@ -567,7 +569,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
   const handleSaveQuickEdit = (itemId: string) => {
     if (activeTab === "pages") {
       const nextVis = { ...cmsData.sectionsVisibility, [itemId]: quickEditFields.status === "published" };
-      onSave({ ...cmsData, sectionsVisibility: nextVis });
+      onSave({ ...cmsData, sectionsVisibility: nextVis }, "✅ Page section quick edit saved!");
       setQuickEditingId(null);
       return;
     }
@@ -597,7 +599,7 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
       return item;
     });
 
-    onSave({ ...cmsData, [key]: updated });
+    onSave({ ...cmsData, [key]: updated }, "✅ Quick edit changes saved successfully!");
     setQuickEditingId(null);
   };
 

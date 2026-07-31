@@ -52,6 +52,7 @@ import {
 
 import WPContentManager from "./WPContentManager";
 import { WPMediaLibraryModal } from "./WPMediaLibraryModal";
+import { WPUserManager } from "./WPUserManager";
 
 interface WPSimulatorProps {
   onClose?: () => void;
@@ -64,6 +65,15 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
   >("dashboard");
   const [cmsData, setCmsData] = useState<CMSData>(getCMSData());
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [toastNotification, setToastNotification] = useState<{ message: string; type: "success" | "error" } | null>(null);
+
+  const showNotification = (message: string, type: "success" | "error" = "success") => {
+    setToastNotification({ message, type });
+    setTimeout(() => {
+      setToastNotification((prev) => (prev?.message === message ? null : prev));
+    }, 4000);
+  };
 
   // Authentication & Security States
   const [sessionUser, setSessionUser] = useState<any | null>(null);
@@ -181,11 +191,24 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
     }
   };
 
-  const handleSave = (updatedData: CMSData) => {
-    saveCMSData(updatedData);
-    setCmsData(updatedData);
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 2000);
+  const handleSave = async (updatedData: CMSData, customMsg?: string) => {
+    setIsSaving(true);
+    setSaveSuccess(false);
+    try {
+      const ok = await saveCMSData(updatedData);
+      setCmsData(updatedData);
+      if (ok !== false) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+        showNotification(customMsg || "✅ Changes Saved & Synchronized Successfully!", "success");
+      } else {
+        showNotification("❌ Failed to Save Changes to Server Database", "error");
+      }
+    } catch (err) {
+      showNotification("❌ Something Went Wrong. Please Try Again.", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
@@ -379,10 +402,15 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
                   </div>
                 )}
 
-                {saveSuccess ? (
-                  <span className="text-xs text-green-400 font-bold flex items-center space-x-1.5 animate-pulse bg-green-500/10 border border-green-500/20 px-3 py-1 rounded-full">
-                    <CheckCircle2 size={12} />
-                    <span>WP DB Saved & Synchronized!</span>
+                {isSaving ? (
+                  <span className="text-xs text-amber-300 font-bold flex items-center space-x-2 bg-amber-500/15 border border-amber-500/30 px-3 py-1 rounded-full animate-pulse">
+                    <span className="w-2.5 h-2.5 rounded-full border-2 border-amber-300 border-t-transparent animate-spin"></span>
+                    <span>Saving Changes...</span>
+                  </span>
+                ) : saveSuccess ? (
+                  <span className="text-xs text-emerald-300 font-bold flex items-center space-x-1.5 bg-emerald-500/15 border border-emerald-500/30 px-3 py-1 rounded-full">
+                    <CheckCircle2 size={13} className="text-emerald-400" />
+                    <span>Saved & Synchronized!</span>
                   </span>
                 ) : (
                   <span className="text-[10px] text-[#c9c2ab]/50 tracking-wide font-mono uppercase">
@@ -1401,101 +1429,7 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
 
                 {/* TAB 9: USERS & AUTH ROLES */}
                 {activeTab === "users" && (
-                  <div className="space-y-6 text-left">
-                    <div className="border-b border-[#d9b45c]/15 pb-2">
-                      <h2 className="font-serif text-xl text-[#f3ecd8] font-bold">WordPress User Directories & Scholar Authors</h2>
-                      <p className="text-xs text-[#c9c2ab] mt-1 font-sans">Simulate database roles and assign permissions to specific scholars in the workspace.</p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      
-                      {/* Left: User Profiles list */}
-                      <div className="bg-[#12141b] border border-[#d9b45c]/10 rounded-xl p-5 space-y-4 md:col-span-2">
-                        <span className="text-[10px] text-[#d9b45c] uppercase font-bold tracking-widest block border-b border-[#d9b45c]/10 pb-1.5">Registered Accounts</span>
-                        
-                        <div className="space-y-3">
-                          {cmsData.userProfiles?.map((user) => (
-                            <div key={user.id} className="flex items-center justify-between bg-[#07080b]/50 border border-[#d9b45c]/10 p-3 rounded-lg">
-                              <div className="flex items-center space-x-3">
-                                <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover" referrerPolicy="no-referrer" />
-                                <div>
-                                  <span className="text-xs font-sans font-bold text-white block">{user.name}</span>
-                                  <span className="text-[10px] text-[#c9c2ab]/50 block">{user.email}</span>
-                                </div>
-                              </div>
-                              
-                              <div className="flex items-center space-x-2">
-                                <select 
-                                  value={user.role}
-                                  onChange={(e) => {
-                                    const nextUsers = cmsData.userProfiles.map(u => u.id === user.id ? { ...u, role: e.target.value as any } : u);
-                                    handleSave({ ...cmsData, userProfiles: nextUsers });
-                                  }}
-                                  className="bg-[#12141b] border border-[#d9b45c]/20 rounded p-1 text-[11px] text-[#d9b45c] font-sans font-bold cursor-pointer"
-                                >
-                                  <option value="Administrator">Administrator</option>
-                                  <option value="Editor">Editor</option>
-                                  <option value="Author">Author</option>
-                                  <option value="Subscriber">Subscriber</option>
-                                </select>
-                                
-                                <button 
-                                  onClick={() => {
-                                    if (cmsData.userProfiles.length <= 1) return alert("Must keep at least one admin.");
-                                    const nextUsers = cmsData.userProfiles.filter(u => u.id !== user.id);
-                                    handleSave({ ...cmsData, userProfiles: nextUsers });
-                                  }}
-                                  className="text-red-400 hover:text-red-300 p-1"
-                                >
-                                  <Trash2 size={13} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Right: Quick account details */}
-                      <div className="bg-[#12141b] border border-[#d9b45c]/10 rounded-xl p-5 space-y-4 h-fit">
-                        <span className="text-[10px] text-[#d9b45c] uppercase font-bold tracking-widest block border-b border-[#d9b45c]/10 pb-1.5">Create Scholar Account</span>
-                        
-                        <div className="space-y-3 text-xs">
-                          <div className="space-y-1">
-                            <label className="text-[10px] text-[#c9c2ab] uppercase font-bold block">Account Display Name</label>
-                            <input type="text" placeholder="e.g. Sheikh Al-Kamil" id="new-user-name" className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded p-2 text-xs text-white font-sans outline-none" />
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-[10px] text-[#c9c2ab] uppercase font-bold block">Scholar Email</label>
-                            <input type="email" placeholder="sheikh@truthquran.com" id="new-user-email" className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded p-2 text-xs text-white font-sans outline-none" />
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const nameInput = document.getElementById("new-user-name") as HTMLInputElement;
-                              const emailInput = document.getElementById("new-user-email") as HTMLInputElement;
-                              if (!nameInput?.value || !emailInput?.value) return alert("Fill in details.");
-                              const newUser: WPUser = {
-                                id: `u-${Date.now()}`,
-                                name: nameInput.value,
-                                email: emailInput.value,
-                                role: "Author",
-                                avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80",
-                                registeredDate: new Date().toISOString().split("T")[0]
-                              };
-                              handleSave({ ...cmsData, userProfiles: [...(cmsData.userProfiles || []), newUser] });
-                              nameInput.value = "";
-                              emailInput.value = "";
-                            }}
-                            className="w-full py-2 bg-[#d9b45c] text-black text-xs font-sans font-extrabold uppercase tracking-widest rounded"
-                          >
-                            Add New Account
-                          </button>
-                        </div>
-                      </div>
-
-                    </div>
-                  </div>
+                  <WPUserManager cmsData={cmsData} onSave={handleSave} />
                 )}
 
                 {/* TAB 10: SETTINGS */}
@@ -1733,6 +1667,35 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
           currentThemeImageKey === "siteLogo" || currentThemeImageKey === "siteFavicon" ? "1:1" : "free"
         }
       />
+
+      {/* Floating Global Toast Notification Overlay */}
+      {isSaving && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[99999] flex items-center space-x-3 bg-[#12141b]/95 border border-amber-500/50 text-amber-300 px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.5)] backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-300">
+          <span className="w-4 h-4 rounded-full border-2 border-amber-400 border-t-transparent animate-spin"></span>
+          <span className="text-xs font-sans font-bold uppercase tracking-wider">Saving & Synchronizing Database...</span>
+        </div>
+      )}
+
+      {!isSaving && toastNotification && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[99999] flex items-center space-x-3 px-6 py-3.5 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.6)] backdrop-blur-md animate-in fade-in slide-in-from-top-4 duration-300 ${
+          toastNotification.type === "success" 
+            ? "bg-[#0b1b13]/95 border border-emerald-500/60 text-emerald-300" 
+            : "bg-[#1b0b0b]/95 border border-red-500/60 text-red-300"
+        }`}>
+          {toastNotification.type === "success" ? (
+            <CheckCircle2 size={20} className="text-emerald-400 flex-shrink-0" />
+          ) : (
+            <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
+          )}
+          <span className="text-xs font-sans font-extrabold tracking-wide">{toastNotification.message}</span>
+          <button 
+            onClick={() => setToastNotification(null)}
+            className="ml-3 text-gray-400 hover:text-white p-1 rounded-lg transition-colors cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
     </>
   );
 }

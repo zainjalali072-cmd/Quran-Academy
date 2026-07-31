@@ -27,10 +27,21 @@ export interface SEOConfig {
 export interface WPUser {
   id: string;
   name: string;
+  username?: string;
   email: string;
   role: "Administrator" | "Editor" | "Author" | "Subscriber";
   avatar: string;
   registeredDate: string;
+  phone?: string;
+  bio?: string;
+  password?: string;
+  status?: "active" | "disabled";
+  socialLinks?: {
+    twitter?: string;
+    facebook?: string;
+    linkedin?: string;
+    website?: string;
+  };
 }
 
 export interface WPMedia {
@@ -740,31 +751,30 @@ export const getCMSData = (): CMSData => {
   };
 };
 
-export const saveCMSData = (data: CMSData): void => {
+export const saveCMSData = async (data: CMSData): Promise<boolean> => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   // Dispatch a custom event to notify React components of changes
   window.dispatchEvent(new Event("cms_data_updated"));
 
-  // Propagate changes asynchronously to Express backend server database
-  fetch("/api/cms-data", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "XMLHttpRequest",
-      "X-WP-Admin-Token": "SECURE_WP_WPSECRET_2026"
-    },
-    body: JSON.stringify(data)
-  })
-    .then((res) => {
-      if (!res.ok) {
-        return res.json().then((err) => {
-          console.error("Failed to sync save with server database:", err.error);
-        });
-      }
-    })
-    .catch((err) => {
-      console.error("Error syncing save with server database:", err);
+  try {
+    const res = await fetch("/api/cms-data", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+        "X-WP-Admin-Token": "SECURE_WP_WPSECRET_2026"
+      },
+      body: JSON.stringify(data)
     });
+    if (!res.ok) {
+      console.error("Failed to sync save with server database");
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("Error syncing save with server database:", err);
+    return true;
+  }
 };
 
 export const resetCMSData = (): CMSData => {
