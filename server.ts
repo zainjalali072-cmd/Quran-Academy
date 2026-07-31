@@ -692,15 +692,16 @@ function getCleanVerificationCode(val?: string): string {
 function injectSeoMetaTags(html: string): string {
   try {
     const db = getDatabase();
-    const rawGsc = db.integrations?.googleSiteVerification || db.integrations?.gscId || "TRUTH_QURAN_GSC_VERIFY_2026";
-    const gscCode = getCleanVerificationCode(rawGsc) || "TRUTH_QURAN_GSC_VERIFY_2026";
+    const rawGsc = db.integrations?.googleSiteVerification || db.integrations?.gscId;
+    const gscCode = getCleanVerificationCode(rawGsc);
     
-    const gscMetaTag = `<meta name="google-site-verification" content="${gscCode}" />`;
-    
-    if (html.includes('name="google-site-verification"')) {
-      html = html.replace(/<meta\s+name=["']google-site-verification["']\s+content=["'][^"']*["']\s*\/?>/gi, gscMetaTag);
-    } else {
-      html = html.replace("</head>", `  ${gscMetaTag}\n</head>`);
+    if (gscCode && gscCode !== "TRUTH_QURAN_GSC_VERIFY_2026") {
+      const gscMetaTag = `<meta name="google-site-verification" content="${gscCode}" />`;
+      if (html.includes('name="google-site-verification"')) {
+        html = html.replace(/<meta\s+name=["']google-site-verification["']\s+content=["'][^"']*["']\s*\/?>/gi, gscMetaTag);
+      } else {
+        html = html.replace("</head>", `  ${gscMetaTag}\n</head>`);
+      }
     }
 
     const rawBing = db.integrations?.bingSiteVerification;

@@ -144,8 +144,13 @@ export default function SEOHead({ cmsData, currentView, activePostId }: SEOHeadP
     // Google Search Console Verification code
     const rawGsc = cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId;
     const gscCode = cleanVerificationCode(rawGsc);
-    if (gscCode) {
+    if (gscCode && gscCode !== "TRUTH_QURAN_GSC_VERIFY_2026") {
       setMetaTag("name", "google-site-verification", gscCode);
+    } else {
+      const existingGsc = document.querySelector('meta[name="google-site-verification"]');
+      if (existingGsc) {
+        existingGsc.remove();
+      }
     }
 
     // Bing Webmaster Tools Verification code

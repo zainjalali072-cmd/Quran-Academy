@@ -396,12 +396,12 @@ export const DEFAULT_VIDEOS: WPVideo[] = [
 
 export const DEFAULT_INTEGRATIONS = {
   ga4Id: "G-TRUTHQURAN123",
-  gscId: "TRUTH_QURAN_GSC_VERIFY_2026",
+  gscId: "",
   gtmId: "GTM-P8QXTR",
   fbPixelId: "9876543210123",
   clarityId: "clrt89abc",
-  googleSiteVerification: "TRUTH_QURAN_GSC_VERIFY_2026",
-  bingSiteVerification: "MS_VALIDATE_TRUTH_QURAN_2026",
+  googleSiteVerification: "",
+  bingSiteVerification: "",
   customHeadScripts: "<!-- Google & Analytics Master Verification Tags -->",
   isConnected: true
 };

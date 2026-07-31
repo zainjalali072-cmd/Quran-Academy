@@ -1117,34 +1117,60 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
                       </button>
                     </div>
 
-                    {/* Search Console & Webmaster Tools Block */}
-                    <div className="bg-[#12141b] border border-[#d9b45c]/15 rounded-xl p-6 space-y-6">
-                      <div className="border-b border-[#d9b45c]/10 pb-3 flex items-center justify-between">
+                    {/* Google Search Console & Master Webmaster Verification Section */}
+                    <div className="bg-[#12141b] border border-[#d9b45c]/25 rounded-xl p-6 space-y-6">
+                      <div className="border-b border-[#d9b45c]/15 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                          <span className="text-xs font-sans font-bold text-[#d9b45c] uppercase tracking-wider block">Webmaster Verification Tools</span>
-                          <p className="text-[11px] text-[#c9c2ab] mt-0.5 font-sans">
-                            Pasting verification codes below will automatically insert the corresponding &lt;meta&gt; verification tags inside the &lt;head&gt; section of every page.
+                          <div className="flex items-center space-x-2">
+                            <ShieldCheck className="text-blue-400" size={22} />
+                            <h3 className="text-sm font-sans font-bold text-white uppercase tracking-wider">
+                              Google Search Console Ownership Verification
+                            </h3>
+                          </div>
+                          <p className="text-[11px] text-[#c9c2ab] mt-1 font-sans">
+                            Paste the HTML tag or verification token from Google Search Console. It will be automatically parsed and injected into the HTML &lt;head&gt; of every page.
                           </p>
                         </div>
-                        <ShieldCheck className="text-[#d9b45c]/40 hidden sm:block" size={24} />
+
+                        {/* Live Detection Status Badge */}
+                        {(() => {
+                          const raw = cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId || "";
+                          let code = String(raw).trim();
+                          const match = code.match(/content=["']([^"']+)["']/i);
+                          if (match && match[1]) code = match[1].trim();
+                          if (code.includes("google-site-verification=")) code = code.replace(/^google-site-verification=/, "").trim();
+                          
+                          const isValid = code.length > 0 && code !== "TRUTH_QURAN_GSC_VERIFY_2026";
+                          
+                          return isValid ? (
+                            <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 rounded-full text-[11px] font-sans font-semibold">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                              <span>Meta Tag Injected & Detected</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-500/15 border border-amber-500/30 text-amber-300 rounded-full text-[11px] font-sans font-semibold">
+                              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+                              <span>Awaiting Verification Code</span>
+                            </span>
+                          );
+                        })()}
                       </div>
 
-                      <div className="space-y-5">
-                        {/* Google Search Console Field */}
+                      <div className="space-y-4">
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
-                            <label htmlFor="gsc-field" className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center space-x-2">
-                              <span className="w-2 h-2 rounded-full bg-blue-400"></span>
-                              <span>Google Search Console Verification Code</span>
+                            <label htmlFor="gsc-field-main" className="text-xs font-sans font-bold text-white uppercase tracking-wider flex items-center space-x-2">
+                              <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                              <span>Paste Google Search Console HTML Meta Tag or Verification Code</span>
                             </label>
                             <span className="text-[10px] text-[#d9b45c] font-mono bg-[#d9b45c]/10 px-2 py-0.5 rounded border border-[#d9b45c]/20">
                               google-site-verification
                             </span>
                           </div>
-                          
-                          <input
-                            id="gsc-field"
-                            type="text"
+
+                          <textarea
+                            id="gsc-field-main"
+                            rows={2}
                             value={cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId || ""}
                             onChange={(e) => {
                               const val = e.target.value;
@@ -1155,23 +1181,65 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
                               };
                               handleSave({ ...cmsData, integrations: updatedIntegrations });
                             }}
-                            placeholder="e.g. TRUTH_QURAN_GSC_VERIFY_2026 or <meta name=&quot;google-site-verification&quot; content=&quot;...&quot; />"
-                            className="w-full bg-[#07080b] border border-[#d9b45c]/25 rounded-lg p-3 text-xs text-white font-mono placeholder:text-gray-600 outline-none focus:border-[#d9b45c] focus:ring-1 focus:ring-[#d9b45c] transition-all"
+                            placeholder={`Paste HTML tag from Search Console:\n<meta name="google-site-verification" content="YOUR_VERIFICATION_TOKEN" />`}
+                            className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-lg p-3 text-xs text-blue-200 font-mono placeholder:text-gray-600 outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 transition-all leading-relaxed"
                           />
-
-                          {/* Generated Meta Tag Live Preview Box */}
-                          <div className="bg-[#07080b]/60 border border-white/10 rounded-lg p-3 space-y-1 font-mono text-[11px]">
-                            <span className="text-[9px] text-[#c9c2ab]/60 uppercase font-sans font-bold block">Auto-Injected &lt;head&gt; Meta Tag Preview:</span>
-                            <code className="text-green-400 block break-all">
-                              {`<meta name="google-site-verification" content="${
-                                (cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId || "")
-                                  .replace(/<meta[^>]*content=["']([^"']+)["'][^>]*>/i, "$1")
-                                  .replace(/^google-site-verification=/, "") || "YOUR_CODE"
-                              }" />`}
-                            </code>
-                          </div>
+                          <p className="text-[10px] text-[#c9c2ab]/70 font-sans">
+                            Supports full &lt;meta name="google-site-verification" content="..." /&gt;, key-value pairs, or raw token strings. Replaces old verification codes automatically.
+                          </p>
                         </div>
 
+                        {/* Live Meta Tag & Token Preview Inspector */}
+                        {(() => {
+                          const raw = cmsData.integrations?.googleSiteVerification || cmsData.integrations?.gscId || "";
+                          let token = String(raw).trim();
+                          const match = token.match(/content=["']([^"']+)["']/i);
+                          if (match && match[1]) token = match[1].trim();
+                          if (token.includes("google-site-verification=")) token = token.replace(/^google-site-verification=/, "").trim();
+                          const hasToken = token.length > 0 && token !== "TRUTH_QURAN_GSC_VERIFY_2026";
+
+                          return (
+                            <div className="bg-[#07080b] border border-blue-500/20 rounded-lg p-4 space-y-3 font-mono text-xs">
+                              <div className="flex items-center justify-between text-[10px] text-gray-400 border-b border-white/5 pb-2">
+                                <span className="uppercase font-sans font-bold text-[#d9b45c]">HTML &lt;head&gt; Inspection & Live Verification Output</span>
+                                <span className={hasToken ? "text-emerald-400 font-bold font-sans" : "text-amber-400 font-sans"}>
+                                  {hasToken ? "✓ Ready for Google Search Console Verification" : "⚠️ Paste Token Above"}
+                                </span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <div className="flex items-center space-x-2 text-[11px]">
+                                  <span className="text-gray-400 text-[10px] font-sans w-24">Extracted Token:</span>
+                                  <code className={hasToken ? "text-blue-300 font-bold bg-blue-950/40 px-2 py-0.5 rounded border border-blue-800/40 break-all" : "text-gray-500 italic font-sans"}>
+                                    {hasToken ? token : "No token entered yet"}
+                                  </code>
+                                </div>
+
+                                <div className="flex items-center space-x-2 text-[11px]">
+                                  <span className="text-gray-400 text-[10px] font-sans w-24">Live Meta Tag:</span>
+                                  <code className={hasToken ? "text-emerald-400 font-bold bg-emerald-950/30 px-2 py-0.5 rounded border border-emerald-800/40 break-all" : "text-gray-500 italic font-sans"}>
+                                    {hasToken ? `<meta name="google-site-verification" content="${token}" />` : "Not injected (waiting for token)"}
+                                  </code>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+
+                    {/* Other Webmaster Tools (Bing, Analytics, GTM, FB Pixel) */}
+                    <div className="bg-[#12141b] border border-[#d9b45c]/15 rounded-xl p-6 space-y-6">
+                      <div className="border-b border-[#d9b45c]/10 pb-3 flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-sans font-bold text-[#d9b45c] uppercase tracking-wider block">Additional Search Engines & Trackers</span>
+                          <p className="text-[11px] text-[#c9c2ab] mt-0.5 font-sans">
+                            Configure Bing Webmaster Tools, Google Analytics, Tag Manager, and Meta Pixel.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="space-y-5">
                         {/* Bing Webmaster Tools Field */}
                         <div className="space-y-2">
                           <div className="flex items-center justify-between">
