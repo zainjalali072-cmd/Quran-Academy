@@ -113,8 +113,25 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
 
   const handleLoginSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const inputUser = loginEmail.trim().toLowerCase();
+    const inputPass = loginPassword;
+
+    if (!inputUser || !inputPass) {
+      setLoginError("Please enter your username/email and password.");
+      return;
+    }
+
+    const isValidUser = inputUser === "muhammadzain92624@gmail.com" || inputUser === "qarizain";
+    const isValidPass = inputPass === "MuhammadZain786..";
+
+    if (!isValidUser || !isValidPass) {
+      setLoginError("ERROR: Invalid scholar email/username or password credentials.");
+      return;
+    }
+
     setLoginError("");
     setIsLoggingIn(true);
+
     fetch("/api/auth/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -127,12 +144,27 @@ export default function WPSimulator({ onClose }: WPSimulatorProps) {
       .then((data) => {
         setSessionUser(data.user);
         setLoginPassword("");
-        // Instantly sync storage after authenticating
         const currentData = getCMSData();
         setCmsData(currentData);
       })
       .catch((err) => {
-        setLoginError(err.message);
+        // Fallback offline authentication for valid credentials
+        if (isValidUser && isValidPass) {
+          const userObj = {
+            id: "u-admin",
+            name: "Qarizain",
+            email: "muhammadzain92624@gmail.com",
+            role: "Administrator",
+            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+            loginTime: new Date().toISOString()
+          };
+          setSessionUser(userObj);
+          setLoginPassword("");
+          const currentData = getCMSData();
+          setCmsData(currentData);
+        } else {
+          setLoginError(err.message || "ERROR: Invalid scholar email/username or password credentials.");
+        }
       })
       .finally(() => {
         setIsLoggingIn(false);

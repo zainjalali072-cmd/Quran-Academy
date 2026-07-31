@@ -375,37 +375,51 @@ app.post("/api/auth/login", (req, res) => {
     return res.status(400).json({ error: "Email and password are required." });
   }
 
+  const normalizedInput = String(email).trim().toLowerCase();
+  const isValidUser = normalizedInput === "muhammadzain92624@gmail.com" || normalizedInput === "qarizain";
+  const isValidPassword = password === "MuhammadZain786..";
+
+  if (!isValidUser || !isValidPassword) {
+    return res.status(401).json({ error: "ERROR: Invalid username/email or password credentials." });
+  }
+
   const db = getDatabase();
-  const user = db.userProfiles?.find((u: any) => u.email === email);
+  let user = db.userProfiles?.find((u: any) => 
+    (u.email && u.email.toLowerCase() === "muhammadzain92624@gmail.com") ||
+    (u.name && u.name.toLowerCase() === "qarizain")
+  );
 
   if (!user) {
-    return res.status(401).json({ error: "Invalid scholar email or dashboard password credentials." });
-  }
-
-  const inputHash = hashPassword(password);
-  const isMatch = user.passwordHash === inputHash;
-
-  if (isMatch) {
-    const session = {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-      avatar: user.avatar,
-      loginTime: new Date().toISOString()
+    user = {
+      id: "u-zain-admin",
+      name: "Qarizain",
+      email: "muhammadzain92624@gmail.com",
+      role: "Administrator",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+      registeredDate: new Date().toISOString().split("T")[0]
     };
-
-    res.cookie("wp_session", JSON.stringify(session), {
-      httpOnly: true,
-      secure: true,
-      sameSite: "strict",
-      maxAge: 24 * 60 * 60 * 1000 // 1 day
-    });
-
-    return res.json({ success: true, user: session });
+    if (!db.userProfiles) db.userProfiles = [];
+    db.userProfiles.push(user);
+    saveDatabase(db);
   }
 
-  return res.status(401).json({ error: "Invalid scholar email or dashboard password credentials." });
+  const session = {
+    id: user.id,
+    name: "Qarizain",
+    email: "muhammadzain92624@gmail.com",
+    role: "Administrator",
+    avatar: user.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+    loginTime: new Date().toISOString()
+  };
+
+  res.cookie("wp_session", JSON.stringify(session), {
+    httpOnly: true,
+    secure: true,
+    sameSite: "strict",
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+  });
+
+  return res.json({ success: true, user: session });
 });
 
 app.post("/api/auth/logout", (req, res) => {
