@@ -62,7 +62,13 @@ export default function SEOHead({ cmsData, currentView, activePostId }: SEOHeadP
             "publisher": {
               "@type": "EducationalOrganization",
               "name": "Truth Quran Academy",
-              "url": "https://truthquranacademy.com"
+              "url": "https://truthquranacademy.com",
+              "logo": {
+                "@type": "ImageObject",
+                "url": "https://truthquranacademy.com/logo.png",
+                "width": 512,
+                "height": 512
+              }
             }
           };
         }
@@ -74,6 +80,13 @@ export default function SEOHead({ cmsData, currentView, activePostId }: SEOHeadP
         "@type": "EducationalOrganization",
         "name": "Truth Quran Academy",
         "url": "https://truthquranacademy.com",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://truthquranacademy.com/logo.png",
+          "width": 512,
+          "height": 512
+        },
+        "image": "https://truthquranacademy.com/logo.png",
         "description": description,
         "email": cmsData.contactEmail || "muhammadzain92624@gmail.com",
         "telephone": cmsData.contactPhone || "+92 321 9347471",

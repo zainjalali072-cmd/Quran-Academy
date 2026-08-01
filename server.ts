@@ -661,12 +661,46 @@ app.get("/sitemap.xml", (req, res) => {
   res.send(xml);
 });
 
+// Serve files from public folder at root
+app.use(express.static(path.join(process.cwd(), "public")));
+
+// Explicit Favicon routes to guarantee HTTP 200 and correct MIME types for Google Search bot
+const faviconMimes: Record<string, string> = {
+  "/favicon.ico": "image/x-icon",
+  "/favicon.png": "image/png",
+  "/favicon-32x32.png": "image/png",
+  "/favicon-192x192.png": "image/png",
+  "/favicon-512x512.png": "image/png",
+  "/apple-touch-icon.png": "image/png",
+  "/logo.png": "image/png",
+  "/site-logo.png": "image/png",
+};
+
+Object.entries(faviconMimes).forEach(([route, mimeType]) => {
+  app.get(route, (req, res) => {
+    const fileName = route.replace("/", "");
+    const filePath = path.join(process.cwd(), "public", fileName);
+    if (fs.existsSync(filePath)) {
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=86400, s-maxage=604800");
+      return res.sendFile(filePath);
+    }
+    return res.status(404).send("Favicon asset not found");
+  });
+});
+
 // Robots.txt Endpoint
 app.get("/robots.txt", (req, res) => {
   const db = getDatabase();
   const content = db.robotsTxtContent || `# Truth Quran Academy Robots.txt Rules
 User-agent: *
 Allow: /
+Allow: /favicon.ico
+Allow: /favicon.png
+Allow: /favicon-*.png
+Allow: /apple-touch-icon.png
+Allow: /logo.png
+Allow: /site-logo.png
 Disallow: /wp-admin/
 Disallow: /api/
 
