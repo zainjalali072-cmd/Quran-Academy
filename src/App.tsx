@@ -450,7 +450,7 @@ export default function App() {
                     <span className="text-[#d9b45c] italic font-normal">Truth Quran Academy</span>
                   </h2>
                   <p className="text-xs md:text-sm text-[#c9c2ab] leading-relaxed max-w-lg mx-auto">
-                    We blend traditional Al-Azhar pedagogical values with cutting-edge global streaming software, ensuring comfortable, safe, and elite lessons for your household.
+                    We blend traditional Jamia Naeemia Lahore pedagogical values with cutting-edge global streaming software, ensuring comfortable, safe, and elite lessons for your household.
                   </p>
                 </div>
 
@@ -515,7 +515,7 @@ export default function App() {
                     Our Structured <span className="text-[#d9b45c] italic font-normal">Quran Programs</span>
                   </h2>
                   <p className="text-xs md:text-sm text-[#c9c2ab] leading-relaxed">
-                    Designed by Al-Azhar pedagogical specialists, our courses cater to absolute beginners taking their first phonetics steps, up to students seeking complete Ijazah.
+                    Designed by Jamia Naeemia Lahore pedagogical specialists, our courses cater to absolute beginners taking their first phonetics steps, up to students seeking complete Ijazah.
                   </p>
                 </div>
 

@@ -269,7 +269,7 @@ const DEFAULT_NAVIGATION_MENU: WPMenuItem[] = [
 
 const DEFAULT_USERS: WPUser[] = [
   { id: "u-1", name: "Muhammad Zain", email: "muhammadzain92624@gmail.com", role: "Administrator", avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-15" },
-  { id: "u-2", name: "Dr. Al-Azhar Scholar", email: "scholar@truthquran.com", role: "Editor", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-20" },
+  { id: "u-2", name: "Dr. Jamia Naeemia Scholar", email: "scholar@truthquran.com", role: "Editor", avatar: "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-06-20" },
   { id: "u-3", name: "Aisha Al-Ansari", email: "aisha@truthquran.com", role: "Author", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&h=150&q=80", registeredDate: "2026-07-01" },
 ];
 
@@ -278,7 +278,7 @@ export const DEFAULT_TEACHERS: WPTeacher[] = [
     id: "teacher-1",
     name: "Sheikh Abdul Rahman",
     role: "Head of Quranic Studies",
-    bio: "Graduated from Al-Azhar University with a master's in Islamic theology and Quranic sciences. Holds high-ranking Ijazah in the ten qira'at of the Quran with Sanad linked to the Prophet (PBUH).",
+    bio: "Graduated from Jamia Naeemia Lahore with a master's in Islamic theology and Quranic sciences. Holds high-ranking Ijazah in the ten qira'at of the Quran with Sanad linked to the Prophet (PBUH).",
     photo: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=300",
     rating: 5,
     experience: "15+ Years",
@@ -522,7 +522,10 @@ export const getCMSData = (): CMSData => {
   const cached = localStorage.getItem(STORAGE_KEY);
   if (cached) {
     try {
-      const parsed = JSON.parse(cached);
+      const cleanedCached = cached
+        .replace(/Al-Azhar University/g, "Jamia Naeemia Lahore")
+        .replace(/Al-Azhar/g, "Jamia Naeemia Lahore");
+      const parsed = JSON.parse(cleanedCached);
       
       // Ensure backward compatibility with newer fields
       if (!parsed.sectionsVisibility) {

@@ -61,7 +61,7 @@ export default function ContactForm() {
     const message = `Salam! I have submitted an enrollment inquiry on your website. Here are my details:\n\n👤 *Student Name:* ${formData.name}\n👶 *Student Age:* ${formData.age} years\n🌍 *Country:* ${formData.country}\n📚 *Selected Course:* ${courseTitle}\n✉️ *Email Address:* ${formData.email}\n\nPlease guide me regarding the trial session.`;
     
     const encoded = encodeURIComponent(message);
-    const whatsappUrl = `${cms.whatsappLink || "https://wa.me/923219347171"}?text=${encoded}`;
+    const whatsappUrl = `${cms.whatsappLink || "https://wa.me/+923219347471"}?text=${encoded}`;
 
     // Push lead inquiry to Simulated WordPress Database
     const newInquiry = {
@@ -169,7 +169,7 @@ export default function ContactForm() {
         {/* Big WhatsApp CTA Button with Green Gradient Pulse */}
         <div className="pt-2">
           <a
-            href={`${cms.whatsappLink || "https://wa.me/923219347171"}?text=Salam!%20I%20have%20a%20question%20regarding%20Truth%20Quran%20Academy.`}
+            href={`${cms.whatsappLink || "https://wa.me/+923219347471"}?text=Salam!%20I%20have%20a%20question%20regarding%20Truth%20Quran%20Academy.`}
             target="_blank"
             rel="noopener noreferrer"
             className="w-full inline-flex items-center justify-center space-x-3 px-6 py-4.5 rounded-full bg-[#1fae5b]/10 border-2 border-[#1fae5b]/30 text-xs md:text-sm font-sans font-extrabold uppercase tracking-wider text-[#5fe396] hover:bg-[#1fae5b] hover:text-white hover:-translate-y-1 hover:shadow-[0_12px_35px_rgba(31,174,91,0.45)] transition-all duration-300"

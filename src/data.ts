@@ -20,7 +20,7 @@ export const academyContact = {
   phone: "+92 321 9347471",
   email: "muhammadzain92624@gmail.com",
   address: "Altaf Colony, Ranjar Head Quarter, Lahore Cantt, Pakistan",
-  whatsapp: "https://wa.me/923219347471",
+  whatsapp: "https://wa.me/+923219347471",
   facebook: "https://facebook.com/truthquran",
   instagram: "https://instagram.com/truth_quran_786",
   developerName: "Abbas Ali",
@@ -44,7 +44,7 @@ export const coursesData: Course[] = [
     title: "Tajweed Mastery",
     arabicGlyph: "قُرْآن",
     tag: "Art of Recitation",
-    description: "Learn the rules of Tajweed (Makharij, Sifat, Madd, and Ghunnah) to recite the Holy Quran with perfect pronunciation, mimicking the traditional scholars of Al-Azhar.",
+    description: "Learn the rules of Tajweed (Makharij, Sifat, Madd, and Ghunnah) to recite the Holy Quran with perfect pronunciation, mimicking the traditional scholars of Jamia Naeemia Lahore.",
     difficulty: "Intermediate",
     image: tajweedMasteryBg
   },
@@ -227,7 +227,7 @@ export const faqItems: FAQItem[] = [
   {
     id: "f1",
     question: "Who are the instructors at Truth Quran Academy?",
-    answer: "Our instructors are highly qualified scholars, certified Huffadh, and graduates from world-renowned Islamic universities such as Al-Azhar, Umm Al-Qura, and leading institutes in Pakistan. They undergo thorough vetting and pedagogical training, and possess outstanding English and Arabic communication skills suitable for students of all ages."
+    answer: "Our instructors are highly qualified scholars, certified Huffadh, and graduates from world-renowned Islamic universities such as Jamia Naeemia Lahore, Umm Al-Qura, and leading institutes in Pakistan. They undergo thorough vetting and pedagogical training, and possess outstanding English and Arabic communication skills suitable for students of all ages."
   },
   {
     id: "f2",
@@ -255,7 +255,7 @@ export const blogPostsData: BlogPost[] = [
   {
     id: "hifz-tips-success",
     title: "5 Proven Strategies to Accelerate Your Quran Memorization (Hifz)",
-    excerpt: "Embarking on the spiritual journey of memorizing the Holy Quran requires dedication, strategy, and consistency. Discover five traditional Al-Azhar techniques to double your retention rate.",
+    excerpt: "Embarking on the spiritual journey of memorizing the Holy Quran requires dedication, strategy, and consistency. Discover five traditional Jamia Naeemia Lahore techniques to double your retention rate.",
     category: "Quran Memorization Tips",
     coverImage: blogHifzTipsImg,
     author: {
@@ -286,7 +286,7 @@ export const blogPostsData: BlogPost[] = [
 </blockquote>
 
 <h3>3. The 'Repetition of Five' (Traditional Method)</h3>
-<p>A proven Al-Azhar method is to recite a newly learned verse 5 times while looking at the script, then 5 times from memory, and then repeat the cycle with the entire page before going to sleep. This shifts information from short-term hippocampus pathways into the long-term neocortex memory.</p>
+<p>A proven Jamia Naeemia Lahore method is to recite a newly learned verse 5 times while looking at the script, then 5 times from memory, and then repeat the cycle with the entire page before going to sleep. This shifts information from short-term hippocampus pathways into the long-term neocortex memory.</p>
 
 <h3>4. Master Tajweed Rules First</h3>
 <p>Never memorize a verse with incorrect pronunciation. Unlearning a faulty recitation is twice as difficult as memorizing from scratch. Always read your new portion to a certified tutor before attempting to commit it to memory.</p>

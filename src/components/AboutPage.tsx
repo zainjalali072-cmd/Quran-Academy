@@ -114,7 +114,7 @@ export default function AboutPage({ setView }: { setView: (view: string) => void
               </div>
               <div className="flex items-center space-x-2">
                 <Check size={12} className="text-[#d9b45c]" />
-                <span>Al-Azhar Curriculum</span>
+                <span>Jamia Naeemia Lahore Curriculum</span>
               </div>
               <div className="flex items-center space-x-2">
                 <Check size={12} className="text-[#d9b45c]" />

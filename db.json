@@ -133,7 +133,7 @@
       "id": "teacher-1",
       "name": "Sheikh Abdul Rahman",
       "role": "Head of Quranic Studies",
-      "bio": "Graduated from Al-Azhar University. Holds high-ranking Ijazah in ten qira'at of the Quran.",
+      "bio": "Graduated from Jamia Naeemia Lahore. Holds high-ranking Ijazah in ten qira'at of the Quran.",
       "photo": "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=300",
       "rating": 5,
       "experience": "15+ Years",
@@ -215,7 +215,7 @@
     },
     {
       "id": "u-2",
-      "name": "Dr. Al-Azhar Scholar",
+      "name": "Dr. Jamia Naeemia Scholar",
       "email": "scholar@truthquran.com",
       "role": "Editor",
       "avatar": "https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&h=150&q=80",
@@ -38123,6 +38123,87 @@
       "timestamp": "2026-07-31T07:28:16.183Z",
       "ip": "103.115.199.164, 169.254.169.126",
       "country": "US",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T14:32:52.528Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T14:32:52.590Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:17:15.498Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:17:15.529Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "home",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:34:49.043Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "contact",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:36:15.928Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "download",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:36:18.798Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "courses",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:36:38.156Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
+      "browser": "Chrome",
+      "device": "Desktop",
+      "url": "about",
+      "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+    },
+    {
+      "timestamp": "2026-08-02T15:43:36.999Z",
+      "ip": "51.158.195.11, 169.254.169.126",
+      "country": "SA",
       "browser": "Chrome",
       "device": "Desktop",
       "url": "home",
