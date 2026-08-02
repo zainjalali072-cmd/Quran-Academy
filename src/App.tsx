@@ -82,18 +82,46 @@ function CountUpNumber({ end, suffix = "", duration = 2000 }: { end: number; suf
   );
 }
 
+import { parseCurrentRoute, navigateToRoute } from "./utils/router";
+
 export default function App() {
-  const [isWpAdmin, setIsWpAdmin] = useState(() => window.location.pathname.startsWith("/wp-admin"));
-  const [currentView, setView] = useState<string>("home");
-  const [activePostId, setActivePostId] = useState<string | null>(null);
+  const [routeState, setRouteState] = useState(() => parseCurrentRoute());
   const [cms, setCms] = useState(getCMSData());
 
+  const currentView = routeState.view;
+  const activePostId = routeState.activePostId;
+  const isWpAdmin = routeState.isWpAdmin;
+
+  const setView = (newView: string) => {
+    navigateToRoute(newView, activePostId);
+  };
+
+  const setActivePostId = (id: string | null) => {
+    if (id) {
+      navigateToRoute("blog-post", id);
+    } else {
+      navigateToRoute("blog", null);
+    }
+  };
+
+  const setIsWpAdmin = (val: boolean) => {
+    if (val) {
+      navigateToRoute("wp-admin");
+    } else {
+      navigateToRoute("home");
+    }
+  };
+
   useEffect(() => {
-    const handleLocationChange = () => {
-      setIsWpAdmin(window.location.pathname.startsWith("/wp-admin"));
+    const handleRoute = () => {
+      setRouteState(parseCurrentRoute());
     };
-    window.addEventListener("popstate", handleLocationChange);
-    return () => window.removeEventListener("popstate", handleLocationChange);
+    window.addEventListener("popstate", handleRoute);
+    window.addEventListener("app_route_changed", handleRoute);
+    return () => {
+      window.removeEventListener("popstate", handleRoute);
+      window.removeEventListener("app_route_changed", handleRoute);
+    };
   }, []);
 
   useEffect(() => {
