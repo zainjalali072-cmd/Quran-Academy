@@ -443,34 +443,49 @@ export const DEFAULT_SEO_HEALTH = {
 };
 
 export const ensureBlogPostSEO = (post: BlogPost): BlogPost => {
+  const stripped = (post.content || "").replace(/<[^>]*>/g, "");
+  const words = stripped.trim() ? stripped.trim().split(/\s+/).filter(Boolean).length : 0;
+  const sentences = stripped.split(/[.!?]+/).filter(s => s.trim().length > 2).length || 1;
+  const paragraphs = (post.content || "").split(/<\/p>|<br\s*\/?>|\n\n+/).filter(p => p.trim().length > 0).length || 1;
+
   return {
     ...post,
+    status: post.status || "published",
     seoTitle: post.seoTitle || `${post.title} | Truth Quran Academy`,
-    metaTitle: post.metaTitle || `${post.title} | Tajweed & Quran Guides`,
+    metaTitle: post.metaTitle || post.title,
     metaDescription: post.metaDescription || post.excerpt.substring(0, 150),
-    focusKeyword: post.focusKeyword || (post.tags && post.tags[0]) || "Quran",
+    focusKeyword: post.focusKeyword || (post.tags && post.tags[0]) || "Tajweed",
     slug: post.slug || post.id || "blog-article",
-    canonicalUrl: post.canonicalUrl || `https://truthquranacademy.com/blog/${post.id || "article"}/`,
-    robotsMeta: post.robotsMeta || "index, follow",
+    canonicalUrl: post.canonicalUrl || `https://truthquranacademy.com/blog/${post.slug || post.id}/`,
+    robotsMeta: post.robotsMeta || "index, follow, max-image-preview:large",
     ogTitle: post.ogTitle || post.title,
     ogDescription: post.ogDescription || post.excerpt,
     ogImage: post.ogImage || post.coverImage,
+    twitterTitle: post.twitterTitle || post.ogTitle || post.title,
+    twitterDescription: post.twitterDescription || post.ogDescription || post.excerpt,
     twitterCard: post.twitterCard || "summary_large_image",
     featuredImage: post.featuredImage || post.coverImage,
     imageAltText: post.imageAltText || `${post.title} cover banner`,
+    imageTitle: post.imageTitle || `${post.title} featured photo`,
+    imageCaption: post.imageCaption || `Illustration for ${post.title}`,
+    imageDescription: post.imageDescription || `High quality featured photo for article ${post.title}`,
+    imageFileName: post.imageFileName || `${(post.slug || "image").toLowerCase()}.jpg`,
     publishDate: post.publishDate || post.date || "2026-07-18",
-    wordCount: post.wordCount || 824,
-    internalLinksCount: post.internalLinksCount || 3,
-    externalLinksCount: post.externalLinksCount || 2,
+    lastUpdated: post.lastUpdated || post.publishDate || post.date || "2026-07-20",
+    wordCount: post.wordCount || words || 450,
+    sentenceCount: post.sentenceCount || sentences,
+    paragraphCount: post.paragraphCount || paragraphs,
+    internalLinksCount: post.internalLinksCount || 2,
+    externalLinksCount: post.externalLinksCount || 1,
     schemaType: post.schemaType || "Article",
     customSchemaJson: post.customSchemaJson || `{
   "@context": "https://schema.org",
-  "@type": "BlogPosting",
+  "@type": "Article",
   "headline": "${post.title}",
   "description": "${post.excerpt}",
   "author": {
     "@type": "Person",
-    "name": "${post.author?.name || "Tutor"}"
+    "name": "${post.author?.name || "Muhammad Zain"}"
   }
 }`
   };

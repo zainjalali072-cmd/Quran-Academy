@@ -1,1428 +1,1649 @@
-import React, { useState } from "react";
-import { CMSData } from "../cmsStore";
+import React, { useState, useEffect, useMemo } from "react";
 import { BlogPost } from "../types";
+import { saveCMSData, CMSData } from "../cmsStore";
 import { 
-  FileText, 
-  Search, 
-  Settings, 
-  Sparkles, 
   Check, 
   AlertTriangle, 
-  X, 
+  ChevronDown, 
+  ChevronUp, 
+  Sparkles, 
+  Link2, 
+  Code, 
+  Share2, 
+  Eye, 
+  FileText, 
+  ImageIcon, 
+  Save, 
   Plus, 
   Trash2, 
-  Award, 
-  BookOpen, 
-  Link2, 
-  Image as ImageIcon, 
+  Copy, 
+  ExternalLink, 
+  Clock, 
+  User, 
+  Tag, 
+  Calendar, 
+  Monitor, 
+  Tablet, 
+  Smartphone, 
+  Search, 
+  HelpCircle, 
+  Heading1, 
+  Heading2, 
+  Heading3, 
+  List, 
+  Quote, 
+  Table, 
+  Film, 
+  Upload, 
+  Crop, 
+  RotateCcw, 
+  RefreshCw, 
   Globe, 
-  Code,
-  Tag,
-  Clock,
-  Eye,
-  ChevronDown,
-  ChevronUp,
-  FolderOpen,
-  ExternalLink,
-  HelpCircle,
-  Share2
+  X, 
+  FileDown, 
+  CheckCircle2, 
+  AlertCircle,
+  Sliders,
+  Maximize2
 } from "lucide-react";
 
 interface WPSEOEditorProps {
   cmsData: CMSData;
-  onSave: (updatedData: CMSData, customMsg?: string) => void;
+  onSave: (newData: CMSData) => void;
   externalPostId?: string | null;
 }
 
 export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEditorProps) {
-  const [selectedPostId, setSelectedPostId] = useState<string | null>(
-    externalPostId || (cmsData.blogPosts && cmsData.blogPosts.length > 0 ? cmsData.blogPosts[0].id : null)
+  // 1. Post Selection State
+  const posts = cmsData.blogPosts || [];
+  const [selectedPostId, setSelectedPostId] = useState<string>(
+    externalPostId || (posts.length > 0 ? posts[0].id : "")
   );
 
-  const [editorTab, setEditorTab] = useState<"write" | "preview">("write");
-  const [saveToast, setSaveToast] = useState<string | null>(null);
-
-  // Automatically trigger new post creation if externalPostId is null
-  const hasInitializedNewRef = React.useRef(false);
-
-  React.useEffect(() => {
-    if (externalPostId === null && !hasInitializedNewRef.current) {
-      hasInitializedNewRef.current = true;
-      handleAddNewPost();
-    } else if (externalPostId) {
+  useEffect(() => {
+    if (externalPostId) {
       setSelectedPostId(externalPostId);
+    } else if (posts.length > 0 && !selectedPostId) {
+      setSelectedPostId(posts[0].id);
     }
-  }, [externalPostId]);
+  }, [externalPostId, posts]);
 
-  // Accordion states for the SEO Sidebar panels
-  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
+  // Current Post loaded
+  const currentPostIndex = posts.findIndex((p) => p.id === selectedPostId);
+  const activePost = currentPostIndex !== -1 ? posts[currentPostIndex] : posts[0] || null;
+
+  // Local Editable Post State
+  const [currentPost, setCurrentPost] = useState<BlogPost | null>(activePost);
+
+  useEffect(() => {
+    if (activePost) {
+      setCurrentPost({
+        ...activePost,
+        status: activePost.status || "published",
+        metaTitle: activePost.metaTitle || activePost.title,
+        metaDescription: activePost.metaDescription || activePost.excerpt,
+        focusKeyword: activePost.focusKeyword || (activePost.tags && activePost.tags[0]) || "Tajweed",
+        slug: activePost.slug || activePost.id,
+        robotsMeta: activePost.robotsMeta || "index, follow",
+        ogTitle: activePost.ogTitle || activePost.title,
+        ogDescription: activePost.ogDescription || activePost.excerpt,
+        ogImage: activePost.ogImage || activePost.coverImage,
+        twitterTitle: activePost.twitterTitle || activePost.ogTitle || activePost.title,
+        twitterDescription: activePost.twitterDescription || activePost.ogDescription || activePost.excerpt,
+        twitterCard: activePost.twitterCard || "summary_large_image",
+        imageAltText: activePost.imageAltText || `${activePost.title} banner`,
+        imageTitle: activePost.imageTitle || `${activePost.title} image`,
+        imageCaption: activePost.imageCaption || "",
+        imageDescription: activePost.imageDescription || "",
+        imageFileName: activePost.imageFileName || `${(activePost.slug || "image").toLowerCase()}.jpg`,
+        internalLinksCount: activePost.internalLinksCount !== undefined ? activePost.internalLinksCount : 2,
+        externalLinksCount: activePost.externalLinksCount !== undefined ? activePost.externalLinksCount : 1,
+        schemaType: activePost.schemaType || "Article",
+        customSchemaJson: activePost.customSchemaJson || JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "Article",
+          "headline": activePost.title,
+          "description": activePost.excerpt,
+          "author": {
+            "@type": "Person",
+            "name": activePost.author?.name || "Muhammad Zain"
+          }
+        }, null, 2)
+      });
+    }
+  }, [selectedPostId, posts.length]);
+
+  // Toast feedback
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // View / Device mode (desktop, tablet, mobile, raw HTML)
+  const [deviceFrame, setDeviceFrame] = useState<"desktop" | "tablet" | "mobile" | "raw">("desktop");
+
+  // Accordions open states in sidebar
+  const [expandedSections, setExpandedSections] = useState({
     meta: true,
+    imageSeo: true,
     links: false,
     schema: false,
     social: false,
-    passed: false
+    publishing: false,
+    revisions: false
   });
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  const toggleSection = (section: keyof typeof expandedSections) => {
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
-  // Load selected post
-  const currentPost = cmsData.blogPosts.find(p => p.id === selectedPostId) || cmsData.blogPosts[0];
+  // Modal Popups
+  const [showBlockMenu, setShowBlockMenu] = useState(false);
+  const [blockSearch, setBlockSearch] = useState("");
+  const [showInternalLinkModal, setShowInternalLinkModal] = useState(false);
+  const [internalLinkSearch, setInternalLinkSearch] = useState("");
+  const [internalLinkTab, setInternalLinkTab] = useState<"posts" | "pages" | "courses" | "teachers" | "faqs">("posts");
+  const [showImageCropModal, setShowImageCropModal] = useState(false);
+  const [cropBrightness, setCropBrightness] = useState(100);
+  const [cropContrast, setCropContrast] = useState(100);
 
+  // Field updater
   const handleUpdateField = (field: keyof BlogPost, value: any) => {
     if (!currentPost) return;
-    const updated = cmsData.blogPosts.map(p => {
-      if (p.id === currentPost.id) {
-        const nextPost = { ...p, [field]: value };
-        // If content changes, auto-calculate word count and reading time
-        if (field === "content") {
-          const stripped = (value || "").replace(/<[^>]*>/g, ""); // strip HTML tags
-          const words = stripped.trim() ? stripped.trim().split(/\s+/).filter(Boolean).length : 0;
-          nextPost.wordCount = words;
-          nextPost.readTime = `${Math.max(1, Math.ceil(words / 200))} min read`;
-        }
-        return nextPost;
-      }
-      return p;
+    setCurrentPost((prev) => (prev ? { ...prev, [field]: value } : null));
+  };
+
+  // 2. Dynamic Real Content & SEO Analysis Engine
+  const contentStats = useMemo(() => {
+    if (!currentPost) return { words: 0, sentences: 0, paragraphs: 0, readingTime: "1 min" };
+    const htmlContent = currentPost.content || "";
+    const stripped = htmlContent.replace(/<[^>]*>/g, " ");
+    const wordList = stripped.trim() ? stripped.trim().split(/\s+/).filter(Boolean) : [];
+    const words = wordList.length;
+    const sentenceList = stripped.split(/[.!?]+/).filter((s) => s.trim().length > 2);
+    const sentences = sentenceList.length || 1;
+    const pList = htmlContent.split(/<\/p>|<br\s*\/?>|\n\n+/).filter((p) => p.trim().length > 0);
+    const paragraphs = pList.length || 1;
+    const readTimeMinutes = Math.max(1, Math.ceil(words / 200));
+
+    return {
+      words,
+      sentences,
+      paragraphs,
+      readingTime: `${readTimeMinutes} min read`
+    };
+  }, [currentPost?.content]);
+
+  // SEO Score calculation (Rank Math Pro style)
+  const seoAnalysis = useMemo(() => {
+    if (!currentPost) {
+      return {
+        score: 0,
+        readability: 0,
+        keywordDensity: 0,
+        rules: [],
+        passedCount: 0,
+        recommendations: []
+      };
+    }
+
+    const keyword = (currentPost.focusKeyword || "").trim().toLowerCase();
+    const title = (currentPost.title || "").toLowerCase();
+    const metaTitle = (currentPost.metaTitle || "").toLowerCase();
+    const metaDesc = (currentPost.metaDescription || "").toLowerCase();
+    const slug = (currentPost.slug || "").toLowerCase();
+    const htmlContent = (currentPost.content || "").toLowerCase();
+    const plainText = htmlContent.replace(/<[^>]*>/g, " ");
+    
+    const words = contentStats.words;
+    const wordList = plainText.trim().split(/\s+/).filter(Boolean);
+
+    let rules: Array<{ id: string; label: string; category: string; passed: boolean; feedback: string; points: number }> = [];
+
+    // 1. Focus Keyword in Post Title
+    const kwInTitle = keyword ? title.includes(keyword) || metaTitle.includes(keyword) : false;
+    rules.push({
+      id: "kw_title",
+      label: "Focus Keyword in Title",
+      category: "Basic SEO",
+      passed: kwInTitle,
+      feedback: kwInTitle ? "Focus keyword appears in the title." : "Add your focus keyword to the post title.",
+      points: 15
     });
-    onSave({ ...cmsData, blogPosts: updated });
-  };
 
-  const handleManualSave = (publishState: "published" | "draft" = "published") => {
-    if (!currentPost) return;
-    const targetStatus: BlogPost["status"] = currentPost.status === "scheduled" ? "scheduled" : publishState;
-    const updated: BlogPost[] = cmsData.blogPosts.map(p => {
-      if (p.id === currentPost.id) {
-        return { 
-          ...p, 
-          status: targetStatus,
-          publishDate: p.publishDate || new Date().toISOString().split("T")[0],
-          date: p.date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
-        };
-      }
-      return p;
+    // 2. Focus Keyword in Meta Description
+    const kwInDesc = keyword ? metaDesc.includes(keyword) : false;
+    rules.push({
+      id: "kw_desc",
+      label: "Focus Keyword in Meta Description",
+      category: "Basic SEO",
+      passed: kwInDesc,
+      feedback: kwInDesc ? "Focus keyword found in meta description." : "Add your focus keyword to the meta description.",
+      points: 12
     });
-    const statusMsg = targetStatus === "published" ? "published live to website" : targetStatus === "draft" ? "saved as draft" : "saved as scheduled";
-    const msg = `✅ Article "${currentPost.title}" ${statusMsg} successfully!`;
-    onSave({ ...cmsData, blogPosts: updated }, msg);
-    setSaveToast(msg);
-    setTimeout(() => setSaveToast(null), 4000);
-  };
 
-  const insertFormatting = (snippet: string) => {
+    // 3. Focus Keyword in URL / Slug
+    const kwInSlug = keyword ? slug.includes(keyword.replace(/\s+/g, "-")) || slug.includes(keyword) : false;
+    rules.push({
+      id: "kw_slug",
+      label: "Focus Keyword in Permalink Slug",
+      category: "Basic SEO",
+      passed: kwInSlug,
+      feedback: kwInSlug ? "Permalink contains focus keyword." : "Include focus keyword in the URL slug.",
+      points: 10
+    });
+
+    // 4. Focus Keyword in first 10% of content
+    const firstPart = plainText.slice(0, Math.max(200, Math.floor(plainText.length * 0.1)));
+    const kwInFirstPart = keyword ? firstPart.includes(keyword) : false;
+    rules.push({
+      id: "kw_first_10",
+      label: "Focus Keyword in First 10% Content",
+      category: "Basic SEO",
+      passed: kwInFirstPart,
+      feedback: kwInFirstPart ? "Focus keyword appears early in the introduction." : "Mention focus keyword in the opening paragraph.",
+      points: 10
+    });
+
+    // 5. Keyword Density (0.5% to 2.5%)
+    let kwOccurrences = 0;
+    if (keyword && words > 0) {
+      const regex = new RegExp(`\\b${keyword.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&")}\\b`, "gi");
+      kwOccurrences = (plainText.match(regex) || []).length;
+    }
+    const keywordDensity = words > 0 && keyword ? (kwOccurrences / words) * 100 : 0;
+    const kwDensityPassed = keywordDensity >= 0.5 && keywordDensity <= 2.5;
+    rules.push({
+      id: "kw_density",
+      label: "Keyword Density (0.5% - 2.5%)",
+      category: "Additional SEO",
+      passed: kwDensityPassed,
+      feedback: kwDensityPassed 
+        ? `Keyword density is optimal (${keywordDensity.toFixed(2)}%).`
+        : keywordDensity === 0 
+          ? "Focus keyword is missing from body content."
+          : `Keyword density is ${keywordDensity.toFixed(2)}% (Target: 0.5% - 2.5%).`,
+      points: 10
+    });
+
+    // 6. Word Count >= 300 words
+    const lengthPassed = words >= 300;
+    rules.push({
+      id: "word_count",
+      label: "Content Length (300+ Words)",
+      category: "Basic SEO",
+      passed: lengthPassed,
+      feedback: lengthPassed 
+        ? `Content is ${words} words long (Good length).` 
+        : `Content is only ${words} words. Aim for at least 300-600 words.`,
+      points: 10
+    });
+
+    // 7. Headings (H2 / H3 present)
+    const hasHeadings = /<h[2-4]/i.test(htmlContent);
+    rules.push({
+      id: "headings",
+      label: "Subheadings (H2, H3) Used",
+      category: "Content Readability",
+      passed: hasHeadings,
+      feedback: hasHeadings ? "Content utilizes subheadings for clear hierarchy." : "Add subheadings (H2/H3) to break up text.",
+      points: 8
+    });
+
+    // 8. Image ALT Text present
+    const imageAlt = currentPost.imageAltText || "";
+    const altPassed = imageAlt.trim().length > 3;
+    rules.push({
+      id: "image_alt",
+      label: "Featured Image Alt Text",
+      category: "Additional SEO",
+      passed: altPassed,
+      feedback: altPassed ? "Featured image has descriptive ALT text." : "Add ALT text to your featured image for accessibility & SEO.",
+      points: 7
+    });
+
+    // 9. Internal Links
+    const internalLinks = currentPost.internalLinksCount || 0;
+    const internalPassed = internalLinks >= 1 || /href=["']\//i.test(htmlContent);
+    rules.push({
+      id: "internal_links",
+      label: "Internal Linking Present",
+      category: "Additional SEO",
+      passed: internalPassed,
+      feedback: internalPassed ? "Internal links found pointing to Academy resources." : "Add internal links to other pages or articles.",
+      points: 6
+    });
+
+    // 10. External Links
+    const externalLinks = currentPost.externalLinksCount || 0;
+    const externalPassed = externalLinks >= 1 || /href=["']http/i.test(htmlContent);
+    rules.push({
+      id: "external_links",
+      label: "Outbound External Links",
+      category: "Additional SEO",
+      passed: externalPassed,
+      feedback: externalPassed ? "Outbound external references included." : "Include at least one external authoritative reference.",
+      points: 4
+    });
+
+    // 11. Meta Description Length (120-160)
+    const descLen = (currentPost.metaDescription || "").length;
+    const descLenPassed = descLen >= 100 && descLen <= 160;
+    rules.push({
+      id: "desc_length",
+      label: "Meta Description Length (100-160 Chars)",
+      category: "Title Readability",
+      passed: descLenPassed,
+      feedback: descLenPassed 
+        ? `Meta description is ${descLen} characters (Optimal).`
+        : `Meta description is ${descLen} characters. Target is 100-160 characters.`,
+      points: 3
+    });
+
+    // Calculate total score out of 100
+    const scoreSum = rules.reduce((acc, r) => acc + (r.passed ? r.points : 0), 0);
+    const maxScore = rules.reduce((acc, r) => acc + r.points, 0);
+    const overallScore = Math.min(100, Math.round((scoreSum / maxScore) * 100));
+
+    // Readability Score calculation (Flesch Kincaid style estimation)
+    const wordsPerSentence = words / Math.max(1, contentStats.sentences);
+    const readability = Math.max(20, Math.min(100, Math.round(100 - (wordsPerSentence * 1.5))));
+
+    const passedCount = rules.filter((r) => r.passed).length;
+    const recommendations = rules.filter((r) => !r.passed).map((r) => r.feedback);
+
+    return {
+      score: overallScore,
+      readability,
+      keywordDensity,
+      rules,
+      passedCount,
+      recommendations
+    };
+  }, [currentPost, contentStats]);
+
+  // Save current post to CMS state & trigger global persistence
+  const handleSaveArticle = (statusOverride?: "published" | "draft" | "scheduled") => {
     if (!currentPost) return;
-    const existing = currentPost.content || "";
-    handleUpdateField("content", existing + (existing ? "\n" : "") + snippet);
+
+    const newStatus = statusOverride || currentPost.status || "published";
+    const updatedPost: BlogPost = {
+      ...currentPost,
+      status: newStatus,
+      lastUpdated: new Date().toISOString().split("T")[0],
+      wordCount: contentStats.words,
+      sentenceCount: contentStats.sentences,
+      paragraphCount: contentStats.paragraphs,
+      readTime: contentStats.readingTime,
+      seoScore: seoAnalysis.score
+    };
+
+    let updatedPosts = [...posts];
+    if (currentPostIndex !== -1) {
+      updatedPosts[currentPostIndex] = updatedPost;
+    } else {
+      updatedPosts.unshift(updatedPost);
+    }
+
+    const updatedCMSData: CMSData = {
+      ...cmsData,
+      blogPosts: updatedPosts
+    };
+
+    saveCMSData(updatedCMSData);
+    onSave(updatedCMSData);
+    setCurrentPost(updatedPost);
+    showToast(`Article "${updatedPost.title}" saved successfully as ${newStatus.toUpperCase()}!`);
   };
 
-  const handleAddNewPost = () => {
+  // Create new post
+  const handleCreateNewPost = () => {
     const newId = `post-${Date.now()}`;
     const newPost: BlogPost = {
       id: newId,
-      title: "New Article Title",
-      excerpt: "Write a short summary or excerpt of your article...",
+      title: "New Quran & Tajweed Guide",
+      excerpt: "Write a short summary introducing this article for readers and search engines...",
       category: "Tajweed Rules",
-      status: "draft",
-      coverImage: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80",
-      imageAltText: "Article cover banner",
+      coverImage: "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&q=80",
       author: {
-        name: cmsData.developerName || "Muhammad Zain",
-        avatar: cmsData.developerAvatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
-        role: "Scholar Admin"
+        name: "Muhammad Zain",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80",
+        role: "Senior Quran Scholar"
       },
-      date: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
-      publishDate: new Date().toISOString().split("T")[0],
+      date: new Date().toISOString().split("T")[0],
       readTime: "3 min read",
-      tags: ["Tajweed", "Quran"],
-      content: "<h2>Introductory Heading</h2><p>Write your article content here with HTML tags or simple text...</p>",
-      seoTitle: "New Article Title | Truth Quran Academy",
-      metaTitle: "New Article Title",
-      metaDescription: "Write a meta description between 100-160 characters for search engines...",
+      tags: ["Tajweed", "Recitation", "Quran"],
+      content: "<h2>Introduction to Tajweed Rules</h2><p>Learning the proper pronunciation and articulation of Quranic Arabic letters is essential for every Muslim. In this comprehensive guide, we explore the core principles of Tajweed...</p>",
+      status: "draft",
+      metaTitle: "New Quran & Tajweed Guide | Truth Quran Academy",
+      metaDescription: "Comprehensive guide on Tajweed rules and Quran recitation techniques.",
       focusKeyword: "Tajweed",
-      slug: `new-article-${Date.now().toString().slice(-4)}`,
-      canonicalUrl: `https://truthquranacademy.com/blog/new-article-${Date.now().toString().slice(-4)}/`,
+      slug: `tajweed-guide-${Date.now().toString().slice(-4)}`,
+      canonicalUrl: `https://truthquranacademy.com/blog/tajweed-guide-${Date.now().toString().slice(-4)}/`,
       robotsMeta: "index, follow",
-      ogTitle: "New Article Title",
-      ogDescription: "Write a summary for social media shares...",
-      ogImage: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80",
-      twitterCard: "summary_large_image",
-      wordCount: 15,
-      internalLinksCount: 1,
+      ogTitle: "New Quran & Tajweed Guide",
+      ogDescription: "Learn Tajweed rules step-by-step with our scholars.",
+      ogImage: "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&q=80",
+      imageAltText: "Quran open on a stand with Tajweed annotations",
+      internalLinksCount: 2,
       externalLinksCount: 1,
-      schemaType: "BlogPosting",
-      customSchemaJson: `{
-  "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": "New Article Title",
-  "description": "Write a short summary or excerpt of your article...",
-  "author": {
-    "@type": "Person",
-    "name": "Muhammad Zain"
-  }
-}`
+      schemaType: "Article",
+      seoScore: 85
     };
 
-    onSave({
+    const updatedCMSData = {
       ...cmsData,
-      blogPosts: [newPost, ...cmsData.blogPosts]
-    });
+      blogPosts: [newPost, ...posts]
+    };
+
+    saveCMSData(updatedCMSData);
+    onSave(updatedCMSData);
     setSelectedPostId(newId);
-    setSaveToast("Created new draft article!");
-    setTimeout(() => setSaveToast(null), 3000);
+    setCurrentPost(newPost);
+    showToast("New article draft initialized!");
   };
 
-  const handleDeletePost = (id?: string) => {
-    if (!id) return;
-    if (cmsData.blogPosts.length <= 1) {
-      alert("At least one blog post must exist in the database.");
-      return;
-    }
-    if (confirm("Are you sure you want to delete this blog post?")) {
-      const filtered = cmsData.blogPosts.filter(p => p.id !== id);
-      onSave({
-        ...cmsData,
-        blogPosts: filtered
-      });
-      if (selectedPostId === id) {
-        setSelectedPostId(filtered[0].id);
-      }
-    }
-  };
-
-  // Schema Presets
-  const schemaPresets = [
-    { type: "FAQPage", name: "FAQ Schema" },
-    { type: "Article", name: "Article Schema" },
-    { type: "BlogPosting", name: "BlogPosting Schema" },
-    { type: "LocalBusiness", name: "Local Business Schema" },
-    { type: "Custom", name: "Custom JSON-LD Schema" }
-  ];
-
-  const handleApplySchemaPreset = (type: string) => {
+  // Delete current post
+  const handleDeletePost = () => {
     if (!currentPost) return;
-    let template = "";
-    if (type === "Article") {
-      template = `{
-  "@context": "https://schema.org",
-  "@type": "Article",
-  "headline": "${currentPost.title}",
-  "image": ["${currentPost.coverImage}"],
-  "datePublished": "2026-07-18T08:00:00+08:00",
-  "author": {
-    "@type": "Person",
-    "name": "${currentPost.author?.name || "Muhammad Zain"}"
-  }
-}`;
-    } else if (type === "FAQPage") {
-      template = `{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [{
-    "@type": "Question",
-    "name": "What are the rules of Tajweed?",
-    "acceptedAnswer": {
-      "@type": "Answer",
-      "text": "Tajweed is the ruleset for correct pronunciation and articulation of Quranic letters."
-    }
-  }]
-}`;
-    } else if (type === "LocalBusiness") {
-      template = `{
-  "@context": "https://schema.org",
-  "@type": "EducationalOrganization",
-  "name": "Truth Quran Academy",
-  "url": "https://truthquranacademy.com",
-  "logo": "https://truthquranacademy.com/logo.png",
-  "address": {
-    "@type": "PostalAddress",
-    "streetAddress": "${cmsData.contactAddress}",
-    "addressLocality": "London",
-    "addressCountry": "UK"
-  }
-}`;
-    } else {
-      template = `{
-  "@context": "https://schema.org",
-  "@type": "${type}",
-  "name": "${currentPost.title}"
-}`;
-    }
+    if (!window.confirm(`Are you sure you want to delete "${currentPost.title}"?`)) return;
 
-    handleUpdateField("schemaType", type);
-    handleUpdateField("customSchemaJson", template);
+    const remaining = posts.filter((p) => p.id !== currentPost.id);
+    const updatedCMSData = {
+      ...cmsData,
+      blogPosts: remaining
+    };
+
+    saveCMSData(updatedCMSData);
+    onSave(updatedCMSData);
+    if (remaining.length > 0) {
+      setSelectedPostId(remaining[0].id);
+      setCurrentPost(remaining[0]);
+    } else {
+      setSelectedPostId("");
+      setCurrentPost(null);
+    }
+    showToast("Post deleted from database.");
   };
 
-  // --- LIVE SEO REAL-TIME ANALYSIS ENGINE ---
-  const strippedContent = currentPost?.content ? currentPost.content.replace(/<[^>]*>/g, "") : "";
-  const words = strippedContent.trim() ? strippedContent.trim().split(/\s+/).filter(Boolean).length : 0;
-  const focusKeyword = (currentPost?.focusKeyword || "").trim();
+  // Block Insertion Logic
+  const handleInsertBlock = (blockHtml: string) => {
+    if (!currentPost) return;
+    const updatedContent = `${currentPost.content || ""}\n${blockHtml}`;
+    handleUpdateField("content", updatedContent);
+    setShowBlockMenu(false);
+    showToast("Block added to post content!");
+  };
 
-  let keywordCount = 0;
-  let density = 0;
-  if (focusKeyword && words > 0) {
-    const escapedKeyword = focusKeyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const regex = new RegExp(escapedKeyword, 'gi');
-    keywordCount = (strippedContent.match(regex) || []).length;
-    density = (keywordCount / words) * 100;
+  // Internal Link Insertion Logic
+  const handleSelectInternalLink = (url: string, title: string) => {
+    if (!currentPost) return;
+    const anchorHtml = `<a href="${url}" title="${title}" class="text-[#d9b45c] underline font-semibold hover:text-[#f2d98a]">${title}</a>`;
+    const updatedContent = `${currentPost.content || ""}\n<p>Related Reading: ${anchorHtml}</p>`;
+    handleUpdateField("content", updatedContent);
+    handleUpdateField("internalLinksCount", (currentPost.internalLinksCount || 0) + 1);
+    setShowInternalLinkModal(false);
+    showToast(`Internal link to "${title}" inserted!`);
+  };
+
+  if (!currentPost) {
+    return (
+      <div className="p-8 bg-[#12141b] rounded-2xl border border-[#d9b45c]/20 text-center space-y-4">
+        <FileText size={48} className="mx-auto text-[#d9b45c]/40" />
+        <h3 className="text-lg font-serif font-bold text-white">No Articles Available</h3>
+        <p className="text-xs text-[#c9c2ab]">Create your first blog post to unlock Rank Math Pro SEO optimization tools.</p>
+        <button
+          onClick={handleCreateNewPost}
+          className="px-5 py-2.5 bg-[#d9b45c] text-black rounded-xl font-bold text-xs hover:bg-[#f2d98a] transition-all"
+        >
+          + Create First Article
+        </button>
+      </div>
+    );
   }
-
-  // Readability Score
-  const sentences = strippedContent.split(/[.!?]+/).filter(s => s.trim().length > 3).length || 1;
-  const avgSentenceLength = words / sentences;
-  const readabilityScore = words === 0 ? 0 : Math.max(10, Math.min(100, Math.round(100 - (avgSentenceLength - 12) * 2)));
-  let readabilityLabel = "Difficult";
-  if (readabilityScore >= 80) readabilityLabel = "Very Easy";
-  else if (readabilityScore >= 60) readabilityLabel = "Standard/Good";
-  else if (readabilityScore >= 40) readabilityLabel = "Fair/Moderate";
-
-  // Check subheadings and focus keyword in subheadings
-  const hasSubheadings = currentPost?.content ? (currentPost.content.toLowerCase().includes("<h2") || currentPost.content.toLowerCase().includes("<h3") || currentPost.content.toLowerCase().includes("<h4")) : false;
-  let keywordInSubheading = false;
-  if (focusKeyword && currentPost?.content) {
-    const headingRegex = /<h[2-4][^>]*>(.*?)<\/h[2-4]>/gi;
-    let match;
-    while ((match = headingRegex.exec(currentPost.content)) !== null) {
-      if (match[1].toLowerCase().includes(focusKeyword.toLowerCase())) {
-        keywordInSubheading = true;
-        break;
-      }
-    }
-  }
-
-  // Links
-  const parsedInternalCount = currentPost?.content ? (currentPost.content.match(/href=["'](\/[^"']*|#[^"']*|https?:\/\/(?:www\.)?truthquranacademy\.com[^"']*)["']/g) || []).length : 0;
-  const totalInternal = currentPost ? Math.max(currentPost.internalLinksCount || 0, parsedInternalCount) : 0;
-
-  const parsedExternalCount = currentPost?.content ? (currentPost.content.match(/href=["']https?:\/\/(?!(?:www\.)?truthquranacademy\.com)[^"']*["']/g) || []).length : 0;
-  const totalExternal = currentPost ? Math.max(currentPost.externalLinksCount || 0, parsedExternalCount) : 0;
-
-  // Schema validation
-  let isSchemaValidJson = false;
-  try {
-    if (currentPost?.customSchemaJson) {
-      JSON.parse(currentPost.customSchemaJson);
-      isSchemaValidJson = true;
-    }
-  } catch (e) {}
-
-  const title = (currentPost?.metaTitle || currentPost?.title || "").trim();
-  const desc = (currentPost?.metaDescription || "").trim();
-  const slug = (currentPost?.slug || "").trim();
-  const imageAlt = (currentPost?.imageAltText || "").trim();
-
-  // Dynamic Rule Scoring List (sums to exactly 100 points)
-  const rules = currentPost ? [
-    {
-      id: "focus_keyword",
-      label: "Focus Keyword",
-      points: 5,
-      passed: focusKeyword.length > 0,
-      feedback: focusKeyword.length > 0 ? `Focus keyword "${focusKeyword}" is defined.` : "Focus keyword is missing.",
-      recommendation: "Missing Focus Keyword",
-      earned: focusKeyword.length > 0 ? 5 : 0
-    },
-    {
-      id: "seo_title_length",
-      label: "SEO Title Length",
-      points: 5,
-      passed: title.length >= 30 && title.length <= 65,
-      feedback: title.length >= 30 && title.length <= 65 ? "SEO Title length is optimal." : title.length === 0 ? "SEO Title is empty." : `Title is ${title.length} chars. Aim for 30-65 chars.`,
-      recommendation: title.length < 30 ? "Meta Description is too short" : title.length > 65 ? "SEO Title is too long" : undefined, // fallback or warning
-      earned: title.length >= 30 && title.length <= 65 ? 5 : (title.length > 0 && title.length <= 80 ? 2 : 0)
-    },
-    {
-      id: "keyword_in_title",
-      label: "Keyword in SEO Title",
-      points: 5,
-      passed: focusKeyword.length > 0 && title.toLowerCase().includes(focusKeyword.toLowerCase()),
-      feedback: focusKeyword.length > 0 && title.toLowerCase().includes(focusKeyword.toLowerCase()) ? "Focus keyword found in SEO Title." : "Focus keyword missing from SEO Title.",
-      recommendation: "Focus keyword missing from SEO Title",
-      earned: focusKeyword.length > 0 && title.toLowerCase().includes(focusKeyword.toLowerCase()) ? 5 : 0
-    },
-    {
-      id: "meta_desc_length",
-      label: "Meta Description",
-      points: 5,
-      passed: desc.length >= 100 && desc.length <= 160,
-      feedback: desc.length >= 100 && desc.length <= 160 ? "Meta description is optimal length." : desc.length === 0 ? "Meta description is empty." : `Description is ${desc.length} chars. Aim for 100-160 chars.`,
-      recommendation: desc.length < 100 ? "Meta Description is too short" : undefined,
-      earned: desc.length >= 100 && desc.length <= 160 ? 5 : (desc.length > 0 ? 2 : 0)
-    },
-    {
-      id: "keyword_in_desc",
-      label: "Keyword in Meta Description",
-      points: 5,
-      passed: focusKeyword.length > 0 && desc.toLowerCase().includes(focusKeyword.toLowerCase()),
-      feedback: focusKeyword.length > 0 && desc.toLowerCase().includes(focusKeyword.toLowerCase()) ? "Focus keyword found in Meta Description." : "Focus keyword missing from Meta Description.",
-      recommendation: "Focus keyword missing from Meta Description",
-      earned: focusKeyword.length > 0 && desc.toLowerCase().includes(focusKeyword.toLowerCase()) ? 5 : 0
-    },
-    {
-      id: "slug_format",
-      label: "URL Slug Format",
-      points: 3,
-      passed: slug.length > 0 && !slug.includes(" ") && slug === slug.toLowerCase(),
-      feedback: slug.length > 0 && !slug.includes(" ") && slug === slug.toLowerCase() ? "Slug is clean and SEO friendly." : "Slug contains uppercase or spaces.",
-      recommendation: "Improve URL Slug formatting",
-      earned: slug.length > 0 && !slug.includes(" ") && slug === slug.toLowerCase() ? 3 : (slug.length > 0 ? 1 : 0)
-    },
-    {
-      id: "keyword_in_slug",
-      label: "Keyword in URL Slug",
-      points: 3,
-      passed: focusKeyword.length > 0 && slug.toLowerCase().includes(focusKeyword.toLowerCase().replace(/\s+/g, "-")),
-      feedback: focusKeyword.length > 0 && slug.toLowerCase().includes(focusKeyword.toLowerCase().replace(/\s+/g, "-")) ? "Focus keyword found in URL Slug." : "Focus keyword missing from URL Slug.",
-      recommendation: "Focus keyword missing from URL Slug",
-      earned: focusKeyword.length > 0 && slug.toLowerCase().includes(focusKeyword.toLowerCase().replace(/\s+/g, "-")) ? 3 : 0
-    },
-    {
-      id: "word_count",
-      label: "Article Length",
-      points: 8,
-      passed: words >= 600,
-      feedback: words >= 600 ? `Excellent word count (${words} words).` : `Word count is ${words}. Aim for 600+.`,
-      recommendation: words < 300 ? "Increase Word Count" : undefined,
-      earned: words >= 600 ? 8 : (words >= 300 ? 5 : (words >= 100 ? 2 : 0))
-    },
-    {
-      id: "heading_structure",
-      label: "Subheading Structure",
-      points: 4,
-      passed: hasSubheadings,
-      feedback: hasSubheadings ? "Subheadings (H2, H3) exist in content." : "No H2/H3 subheadings found.",
-      recommendation: "Improve Heading Structure",
-      earned: hasSubheadings ? 4 : 0
-    },
-    {
-      id: "keyword_in_headings",
-      label: "Keyword in Subheadings",
-      points: 4,
-      passed: focusKeyword.length > 0 && keywordInSubheading,
-      feedback: focusKeyword.length > 0 && keywordInSubheading ? "Focus keyword found in subheadings." : "Focus keyword not found in subheadings.",
-      recommendation: "Include Focus Keyword in a Heading",
-      earned: focusKeyword.length > 0 && keywordInSubheading ? 4 : 0
-    },
-    {
-      id: "keyword_density",
-      label: "Keyword Density",
-      points: 6,
-      passed: focusKeyword.length > 0 && density >= 0.5 && density <= 2.5,
-      feedback: focusKeyword.length > 0 && density >= 0.5 && density <= 2.5 ? `Optimal density: ${density.toFixed(2)}%.` : focusKeyword.length === 0 ? "No focus keyword." : `Density is ${density.toFixed(2)}% (aim for 0.5%-2.5%).`,
-      recommendation: focusKeyword.length > 0 && (density < 0.5 || density > 2.5) ? "Improve Keyword Density" : undefined,
-      earned: focusKeyword.length > 0 && density >= 0.5 && density <= 2.5 ? 6 : (focusKeyword.length > 0 && density > 0 ? 2 : 0)
-    },
-    {
-      id: "internal_links",
-      label: "Internal Links",
-      points: 5,
-      passed: totalInternal >= 2,
-      feedback: totalInternal >= 2 ? `Strong internal structure (${totalInternal} links).` : `Found ${totalInternal} internal link(s).`,
-      recommendation: totalInternal < 2 ? "Add more Internal Links" : undefined,
-      earned: totalInternal >= 2 ? 5 : (totalInternal === 1 ? 3 : 0)
-    },
-    {
-      id: "external_links",
-      label: "External Links",
-      points: 5,
-      passed: totalExternal >= 1,
-      feedback: totalExternal >= 1 ? `${totalExternal} external authority link(s) found.` : "No external links.",
-      recommendation: totalExternal === 0 ? "Add at least one External Link" : undefined,
-      earned: totalExternal >= 2 ? 5 : (totalExternal === 1 ? 3 : 0)
-    },
-    {
-      id: "image_alt_text",
-      label: "Image Alt Text",
-      points: 3,
-      passed: imageAlt.length > 0,
-      feedback: imageAlt.length > 0 ? `Alt text configured.` : "Alt text is missing.",
-      recommendation: "Add Image ALT Text",
-      earned: imageAlt.length > 0 ? 3 : 0
-    },
-    {
-      id: "keyword_in_alt",
-      label: "Keyword in Alt Text",
-      points: 3,
-      passed: focusKeyword.length > 0 && imageAlt.toLowerCase().includes(focusKeyword.toLowerCase()),
-      feedback: focusKeyword.length > 0 && imageAlt.toLowerCase().includes(focusKeyword.toLowerCase()) ? "Focus keyword found in image alt text." : "Focus keyword missing from alt text.",
-      recommendation: "Include keyword in Alt Text",
-      earned: focusKeyword.length > 0 && imageAlt.toLowerCase().includes(focusKeyword.toLowerCase()) ? 3 : 0
-    },
-    {
-      id: "featured_image",
-      label: "Featured Image",
-      points: 4,
-      passed: !!currentPost.coverImage,
-      feedback: currentPost.coverImage ? "Featured image set." : "Featured image is missing.",
-      recommendation: "Set a Featured Image",
-      earned: currentPost.coverImage ? 4 : 0
-    },
-    {
-      id: "readability",
-      label: "Content Readability",
-      points: 5,
-      passed: readabilityScore >= 60,
-      feedback: `Readability score is ${readabilityScore}/100 (${readabilityLabel}).`,
-      recommendation: readabilityScore < 60 ? "Improve Readability" : undefined,
-      earned: readabilityScore >= 60 ? 5 : (readabilityScore >= 40 ? 3 : 1)
-    },
-    {
-      id: "schema_markup",
-      label: "Schema Markup",
-      points: 6,
-      passed: currentPost.schemaType === "FAQPage" && isSchemaValidJson,
-      feedback: currentPost.schemaType === "FAQPage" && isSchemaValidJson ? "FAQ Schema is active and valid." : currentPost.schemaType ? `Schema preset is "${currentPost.schemaType}".` : "No schema markup.",
-      recommendation: currentPost.schemaType !== "FAQPage" || !isSchemaValidJson ? "Add FAQ Schema" : undefined,
-      earned: isSchemaValidJson ? 6 : 0
-    },
-    {
-      id: "tags_configured",
-      label: "Tags",
-      points: 5,
-      passed: (currentPost.tags?.length || 0) >= 2 && currentPost.tags?.some(t => t.toLowerCase().includes(focusKeyword.toLowerCase())),
-      feedback: (currentPost.tags?.length || 0) >= 2 ? "Tags configured correctly." : "Tags are incomplete.",
-      recommendation: "Add tags with Focus Keyword",
-      earned: (currentPost.tags?.length || 0) >= 2 && currentPost.tags?.some(t => t.toLowerCase().includes(focusKeyword.toLowerCase())) ? 5 : ((currentPost.tags?.length || 0) >= 2 ? 3 : 1)
-    },
-    {
-      id: "category_configured",
-      label: "Category",
-      points: 3,
-      passed: !!currentPost.category && currentPost.category.toLowerCase() !== "uncategorized",
-      feedback: `Post category is "${currentPost.category}".`,
-      recommendation: "Assign a relevant Category",
-      earned: !!currentPost.category && currentPost.category.toLowerCase() !== "uncategorized" ? 3 : 0
-    },
-    {
-      id: "canonical",
-      label: "Canonical URL",
-      points: 3,
-      passed: !!currentPost.canonicalUrl && currentPost.canonicalUrl.startsWith("http"),
-      feedback: `Canonical URL defined: "${currentPost.canonicalUrl}".`,
-      recommendation: "Add Canonical URL",
-      earned: !!currentPost.canonicalUrl && currentPost.canonicalUrl.startsWith("http") ? 3 : 0
-    },
-    {
-      id: "og_settings",
-      label: "Open Graph Settings",
-      points: 3,
-      passed: !!currentPost.ogTitle && !!currentPost.ogDescription && !!currentPost.ogImage,
-      feedback: "Open Graph social titles and descriptions are configured.",
-      recommendation: "Configure Open Graph Settings",
-      earned: !!currentPost.ogTitle && !!currentPost.ogDescription && !!currentPost.ogImage ? 3 : 0
-    },
-    {
-      id: "twitter_card",
-      label: "Twitter Card",
-      points: 2,
-      passed: !!currentPost.twitterCard,
-      feedback: `Twitter card format is "${currentPost.twitterCard}".`,
-      recommendation: "Configure Twitter Card Settings",
-      earned: !!currentPost.twitterCard ? 2 : 0
-    }
-  ] : [];
-
-  // Exact list of recommendations specified by the user
-  const recommendationsList: string[] = [];
-  if (currentPost) {
-    if (!focusKeyword) {
-      recommendationsList.push("Missing Focus Keyword");
-    }
-    if (!desc || desc.length < 100) {
-      recommendationsList.push("Meta Description is too short");
-    }
-    if (totalInternal < 2) {
-      recommendationsList.push("Add more Internal Links");
-    }
-    if (totalExternal === 0) {
-      recommendationsList.push("Add at least one External Link");
-    }
-    if (words < 300) {
-      recommendationsList.push("Increase Word Count");
-    }
-    if (focusKeyword && (density < 0.5 || density > 2.5)) {
-      recommendationsList.push("Improve Keyword Density");
-    }
-    if (!imageAlt) {
-      recommendationsList.push("Add Image ALT Text");
-    }
-    if (currentPost.schemaType !== "FAQPage" || !isSchemaValidJson) {
-      recommendationsList.push("Add FAQ Schema");
-    }
-    if (!hasSubheadings || (focusKeyword && !keywordInSubheading)) {
-      recommendationsList.push("Improve Heading Structure");
-    }
-  }
-
-  // Calculate dynamic overall score out of exactly 100
-  const overallScore = currentPost ? Math.max(0, Math.min(100, rules.reduce((acc, r) => acc + r.earned, 0))) : 0;
-  const passedCount = currentPost ? rules.filter(r => r.passed).length : 0;
 
   return (
-    <div className="space-y-6 text-left" id="wp-seo-editor-section">
+    <div className="space-y-6 text-left relative font-sans">
       
-      {/* Toast Notification Banner */}
-      {saveToast && (
-        <div className="bg-green-500/10 border border-green-500/30 text-green-400 p-4 rounded-xl flex items-center justify-between shadow-lg animate-in fade-in duration-200">
-          <div className="flex items-center space-x-2 text-xs font-bold">
-            <Check className="text-green-400 flex-shrink-0" size={16} />
-            <span>{saveToast}</span>
-          </div>
-          <button onClick={() => setSaveToast(null)} className="text-green-400 hover:text-white">
-            <X size={14} />
-          </button>
+      {/* TOAST FEEDBACK NOTIFICATION */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#d9b45c] text-black px-4 py-3 rounded-xl shadow-2xl font-bold text-xs flex items-center space-x-2 border border-black/20 animate-in fade-in slide-in-from-bottom-3 duration-200">
+          <CheckCircle2 size={16} />
+          <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* Header Bar with Action Controls */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#d9b45c]/10 pb-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2.5 rounded-lg bg-[#d9b45c]/10 text-[#d9b45c]">
-            <FileText size={20} />
-          </div>
-          <div>
-            <h2 className="text-lg font-serif font-bold text-white">Gutenberg & SEO Article Studio</h2>
-            <div className="flex items-center space-x-2 text-[10px] text-[#c9c2ab] mt-0.5">
-              <span>Select Article:</span>
-              <select
-                value={selectedPostId || ""}
-                onChange={(e) => setSelectedPostId(e.target.value)}
-                className="bg-[#07080b] border border-[#d9b45c]/25 rounded px-2 py-0.5 text-[#d9b45c] text-[10px] font-sans font-bold outline-none"
-              >
-                {cmsData.blogPosts.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.status === "draft" ? "📝 [DRAFT] " : p.status === "scheduled" ? "⏰ [SCHEDULED] " : "✅ "}
-                    {p.title}
-                  </option>
-                ))}
-              </select>
+      {/* TOP HEADER: RANK MATH PRO TOOLBAR & ACTION BAR */}
+      <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-4 md:p-5 space-y-4 shadow-xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#d9b45c]/10 pb-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#d9b45c] to-[#997a2e] text-black flex items-center justify-center font-bold font-serif text-lg shadow-md">
+              RM
             </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h2 className="font-serif text-lg md:text-xl text-white font-bold">Rank Math Pro Article Studio</h2>
+                <span className="bg-[#d9b45c]/10 border border-[#d9b45c]/30 text-[#f2d98a] text-[9px] font-mono font-bold px-2 py-0.5 rounded-full uppercase">
+                  Gutenberg SEO v3.2
+                </span>
+              </div>
+              <p className="text-[11px] text-[#c9c2ab] mt-0.5">Full On-Page SEO Engine, WordPress Block Editor & Real-Time Website Sync</p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={handleCreateNewPost}
+              className="px-3 py-2 bg-[#1e2230] hover:bg-[#282d3f] text-white border border-white/10 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5"
+            >
+              <Plus size={14} className="text-[#d9b45c]" />
+              <span>New Article</span>
+            </button>
+
+            <button
+              onClick={() => handleSaveArticle("draft")}
+              className="px-3 py-2 bg-[#12141b] hover:bg-white/5 text-[#c9c2ab] border border-white/15 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5"
+            >
+              <Save size={14} />
+              <span>Save Draft</span>
+            </button>
+
+            <button
+              onClick={() => handleSaveArticle("published")}
+              className="px-4 py-2 bg-gradient-to-r from-[#f2d98a] via-[#d9b45c] to-[#b38f3b] text-black rounded-xl text-xs font-bold shadow-lg hover:brightness-110 transition-all flex items-center space-x-1.5"
+            >
+              <Check size={14} />
+              <span>Publish / Sync Website</span>
+            </button>
+
+            <a
+              href={`/blog/${currentPost.slug || currentPost.id}`}
+              target="_blank"
+              rel="noreferrer"
+              className="px-3 py-2 bg-[#07080b] hover:bg-[#12141b] text-[#d9b45c] border border-[#d9b45c]/30 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5"
+            >
+              <ExternalLink size={14} />
+              <span>View Live</span>
+            </a>
+
+            <button
+              onClick={handleDeletePost}
+              className="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl transition-all"
+              title="Delete Article"
+            >
+              <Trash2 size={14} />
+            </button>
           </div>
         </div>
 
-        {/* Right Header Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Write / Preview Mode Toggle */}
-          <div className="bg-[#07080b] p-1 rounded-xl border border-white/10 flex items-center space-x-1">
-            <button
-              type="button"
-              onClick={() => setEditorTab("write")}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-sans font-bold uppercase tracking-wider transition-all ${
-                editorTab === "write" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
-              }`}
+        {/* Post Selector & Device Switcher */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+          {/* Post Selection Dropdown */}
+          <div className="flex items-center space-x-2 flex-1 max-w-md">
+            <span className="text-[10px] uppercase font-bold text-[#c9c2ab] whitespace-nowrap">Editing Article:</span>
+            <select
+              value={selectedPostId}
+              onChange={(e) => setSelectedPostId(e.target.value)}
+              className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-[#d9b45c]"
             >
-              Write Editor
-            </button>
-            <button
-              type="button"
-              onClick={() => setEditorTab("preview")}
-              className={`px-3 py-1.5 rounded-lg text-[10px] font-sans font-bold uppercase tracking-wider flex items-center space-x-1 transition-all ${
-                editorTab === "preview" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
-              }`}
-            >
-              <Eye size={12} />
-              <span>Live Preview</span>
-            </button>
+              {posts.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.status === "published" ? "🟢" : "🟡"} {p.title}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <button
-            onClick={() => handleManualSave("published")}
-            className="flex items-center space-x-1 px-4 py-2 text-[10px] font-sans font-extrabold uppercase tracking-widest text-black bg-[#d9b45c] rounded-xl hover:bg-[#f2d98a] transition-all cursor-pointer shadow-md"
-          >
-            <Check size={13} />
-            <span>Save & Publish</span>
-          </button>
-
-          <button
-            onClick={() => handleManualSave("draft")}
-            className="flex items-center space-x-1 px-3 py-2 text-[10px] font-sans font-bold uppercase tracking-wider text-[#c9c2ab] border border-white/10 hover:border-white/20 hover:text-white bg-[#07080b] rounded-xl transition-all cursor-pointer"
-          >
-            <FileText size={12} />
-            <span>Save Draft</span>
-          </button>
-
-          <button
-            onClick={handleAddNewPost}
-            className="flex items-center space-x-1 px-3 py-2 text-[10px] font-sans font-bold uppercase tracking-wider text-[#d9b45c] border border-[#d9b45c]/30 hover:bg-[#d9b45c]/10 rounded-xl transition-all cursor-pointer"
-          >
-            <Plus size={13} />
-            <span>New Article</span>
-          </button>
-
-          <button
-            onClick={() => handleDeletePost(currentPost?.id)}
-            className="p-2 text-red-400 border border-red-500/10 hover:border-red-500/40 bg-red-500/5 hover:bg-red-500/10 rounded-xl transition-colors cursor-pointer"
-            title="Delete active post"
-          >
-            <Trash2 size={14} />
-          </button>
+          {/* View Device Switcher */}
+          <div className="flex items-center space-x-1 bg-[#07080b] border border-white/10 p-1 rounded-xl">
+            <button
+              onClick={() => setDeviceFrame("desktop")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center space-x-1 transition-all ${
+                deviceFrame === "desktop" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
+              }`}
+            >
+              <Monitor size={12} />
+              <span>Desktop</span>
+            </button>
+            <button
+              onClick={() => setDeviceFrame("tablet")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center space-x-1 transition-all ${
+                deviceFrame === "tablet" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
+              }`}
+            >
+              <Tablet size={12} />
+              <span>Tablet</span>
+            </button>
+            <button
+              onClick={() => setDeviceFrame("mobile")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center space-x-1 transition-all ${
+                deviceFrame === "mobile" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
+              }`}
+            >
+              <Smartphone size={12} />
+              <span>Mobile</span>
+            </button>
+            <button
+              onClick={() => setDeviceFrame("raw")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold flex items-center space-x-1 transition-all ${
+                deviceFrame === "raw" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"
+              }`}
+            >
+              <Code size={12} />
+              <span>HTML</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {currentPost ? (
-        <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+      {/* MAIN LAYOUT: WORKSPACE & RANK MATH SIDEBAR */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+        
+        {/* LEFT COLUMN: GUTENBERG ARTICLE WORKSPACE (8 cols) */}
+        <div className="xl:col-span-8 space-y-6">
           
-          {/* LEFT COLUMN: Main Writing Space or Preview (8 cols) */}
-          <div className="xl:col-span-8 space-y-6">
-            
-            {editorTab === "preview" ? (
-              /* LIVE ARTICLE PREVIEW VIEW */
-              <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-6 md:p-8 space-y-6 text-left shadow-2xl">
-                <div className="flex items-center justify-between pb-4 border-b border-white/10 text-xs">
-                  <span className="text-[10px] uppercase font-sans font-bold tracking-widest text-[#d9b45c] bg-[#d9b45c]/10 px-2.5 py-1 rounded-full border border-[#d9b45c]/20">
-                    Live Article Preview Mode
-                  </span>
-                  <span className="text-[10px] text-[#c9c2ab] font-mono">
-                    Status: <strong className="text-green-400 uppercase">{currentPost.status || "published"}</strong>
-                  </span>
-                </div>
-
-                {/* Preview Banner */}
-                {currentPost.coverImage && (
-                  <div className="relative h-64 md:h-80 rounded-2xl overflow-hidden border border-[#d9b45c]/20 shadow-lg">
-                    <img
-                      src={currentPost.coverImage}
-                      alt={currentPost.imageAltText || currentPost.title}
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent flex items-end p-6">
-                      <div className="space-y-2">
-                        <span className="text-[10px] uppercase font-bold tracking-widest bg-[#d9b45c] text-black px-2 py-0.5 rounded">
-                          {currentPost.category}
-                        </span>
-                        <h1 className="text-xl md:text-2xl font-serif font-bold text-white leading-tight">
-                          {currentPost.title}
-                        </h1>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Author & Metadata Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-4 py-3 border-y border-white/5 text-xs text-[#c9c2ab]">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={currentPost.author?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80"}
-                      alt={currentPost.author?.name || "Author"}
-                      className="w-8 h-8 rounded-full border border-[#d9b45c]/40 object-cover"
-                    />
-                    <div>
-                      <span className="font-bold text-white block leading-tight">{currentPost.author?.name || "Muhammad Zain"}</span>
-                      <span className="text-[9px] text-[#d9b45c]">{currentPost.author?.role || "Scholar Admin"}</span>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-4 text-[10px] font-mono">
-                    <span>Published: {currentPost.publishDate || currentPost.date}</span>
-                    <span>Read Time: {currentPost.readTime || "3 min read"}</span>
-                  </div>
-                </div>
-
-                {/* Excerpt */}
-                {currentPost.excerpt && (
-                  <p className="text-sm italic text-[#d9b45c] bg-[#07080b] p-4 rounded-xl border-l-4 border-[#d9b45c] leading-relaxed font-serif">
-                    "{currentPost.excerpt}"
-                  </p>
-                )}
-
-                {/* Formatted Article Content Body */}
-                <div 
-                  className="prose prose-invert max-w-none text-xs leading-relaxed space-y-4 text-[#c9c2ab] font-sans"
-                  dangerouslySetInnerHTML={{ __html: currentPost.content || "<p>No content entered yet.</p>" }}
-                />
-
-                {/* Tags list */}
-                {currentPost.tags && currentPost.tags.length > 0 && (
-                  <div className="pt-4 border-t border-white/5 flex items-center space-x-2">
-                    <span className="text-[10px] font-bold text-[#c9c2ab] uppercase">Tags:</span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {currentPost.tags.map((tag, idx) => (
-                        <span key={idx} className="bg-[#d9b45c]/10 text-[#f2d98a] border border-[#d9b45c]/20 text-[10px] px-2 py-0.5 rounded-full font-sans font-bold">
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
+          {/* LIVE POST INFORMATION BAR */}
+          <div className="bg-[#12141b]/90 border border-[#d9b45c]/15 rounded-2xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/5 pb-2 text-[11px]">
+              <div className="flex items-center space-x-2">
+                <span className={`px-2 py-0.5 rounded font-mono font-bold text-[9px] uppercase ${
+                  currentPost.status === "published" ? "bg-green-500/10 text-green-400 border border-green-500/20" : "bg-yellow-500/10 text-yellow-400 border border-yellow-500/20"
+                }`}>
+                  {currentPost.status || "published"}
+                </span>
+                <span className="text-[#c9c2ab] font-mono text-[10px]">URL Slug: /blog/{currentPost.slug}</span>
               </div>
-            ) : (
-              /* WRITE EDITOR VIEW */
-              <div className="space-y-4 bg-[#12141b]/50 border border-[#d9b45c]/10 rounded-2xl p-6">
-                
-                {/* Status & Metadata Bar */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-4 border-b border-white/5">
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Publish Status</label>
-                    <select
-                      value={currentPost.status || "published"}
-                      onChange={(e) => handleUpdateField("status", e.target.value)}
-                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-[#d9b45c]"
-                    >
-                      <option value="published">🟢 Published</option>
-                      <option value="draft">🟡 Draft (Private)</option>
-                      <option value="scheduled">🔵 Scheduled</option>
-                    </select>
-                  </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Author</label>
-                    <input
-                      type="text"
-                      value={currentPost.author?.name || "Muhammad Zain"}
-                      onChange={(e) => handleUpdateField("author", { ...currentPost.author, name: e.target.value })}
-                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-[#d9b45c]"
-                      placeholder="e.g. Muhammad Zain"
-                    />
-                  </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(`https://truthquranacademy.com/blog/${currentPost.slug}`);
+                    showToast("Live article URL copied to clipboard!");
+                  }}
+                  className="px-2 py-1 bg-[#07080b] hover:bg-white/5 text-[#d9b45c] rounded text-[10px] font-bold flex items-center space-x-1 border border-[#d9b45c]/20"
+                >
+                  <Copy size={10} />
+                  <span>Copy URL</span>
+                </button>
+              </div>
+            </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Publish Date</label>
-                    <input
-                      type="date"
-                      value={currentPost.publishDate || "2026-07-20"}
-                      onChange={(e) => {
-                        handleUpdateField("publishDate", e.target.value);
-                        handleUpdateField("date", e.target.value);
-                      }}
-                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white font-bold outline-none focus:border-[#d9b45c]"
-                    />
-                  </div>
+            {/* Post Meta Badges */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[9px] uppercase text-[#c9c2ab]/50 block">Word Count</span>
+                <span className="font-bold text-white font-mono">{contentStats.words} words</span>
+              </div>
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[9px] uppercase text-[#c9c2ab]/50 block">Reading Time</span>
+                <span className="font-bold text-white font-mono">{contentStats.readingTime}</span>
+              </div>
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[9px] uppercase text-[#c9c2ab]/50 block">Paragraphs</span>
+                <span className="font-bold text-white font-mono">{contentStats.paragraphs}</span>
+              </div>
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[9px] uppercase text-[#c9c2ab]/50 block">Author</span>
+                <span className="font-bold text-[#d9b45c] truncate block">{currentPost.author?.name || "Muhammad Zain"}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ARTICLE CONTENT CANVAS (CONTAINER DEVICE WRAPPER) */}
+          <div className={`mx-auto transition-all duration-300 ${
+            deviceFrame === "tablet" ? "max-w-[768px] border-8 border-[#12141b] rounded-3xl p-4 shadow-2xl bg-[#07080b]" :
+            deviceFrame === "mobile" ? "max-w-[375px] border-8 border-[#12141b] rounded-3xl p-3 shadow-2xl bg-[#07080b]" :
+            "w-full"
+          }`}>
+            <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-5 md:p-6 space-y-5">
+              
+              {/* Headline H1 Input */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase font-bold text-[#d9b45c] tracking-wider flex items-center space-x-1">
+                    <Heading1 size={12} />
+                    <span>Post Title (H1 Tag)</span>
+                  </label>
+                  <span className={`text-[9px] font-mono ${currentPost.title.length >= 20 && currentPost.title.length <= 70 ? "text-green-400" : "text-yellow-400"}`}>
+                    {currentPost.title.length} chars
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={currentPost.title}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    handleUpdateField("title", val);
+                    if (!currentPost.slug || currentPost.slug === "new-post") {
+                      handleUpdateField("slug", val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                    }
+                  }}
+                  className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-xl px-4 py-3 text-lg md:text-xl font-serif font-bold text-white focus:outline-none focus:border-[#d9b45c] transition-colors"
+                  placeholder="Enter a compelling post title..."
+                />
+              </div>
+
+              {/* Slug / Permalink Edit Bar */}
+              <div className="bg-[#07080b] border border-white/10 rounded-xl p-3 flex items-center space-x-2 text-xs font-mono">
+                <span className="text-[#c9c2ab]/50">https://truthquranacademy.com/blog/</span>
+                <input
+                  type="text"
+                  value={currentPost.slug || ""}
+                  onChange={(e) => handleUpdateField("slug", e.target.value.toLowerCase().replace(/\s+/g, "-"))}
+                  className="flex-1 bg-transparent border-b border-[#d9b45c]/30 text-[#f2d98a] font-bold outline-none px-1"
+                  placeholder="permalink-slug"
+                />
+              </div>
+
+              {/* Excerpt Summary Input */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Article Lead Excerpt (Short Summary)</label>
+                <textarea
+                  rows={2}
+                  value={currentPost.excerpt}
+                  onChange={(e) => handleUpdateField("excerpt", e.target.value)}
+                  className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-[#d9b45c] resize-none"
+                  placeholder="Write a short summary introducing this article..."
+                />
+              </div>
+
+              {/* BLOCK EDITOR TOOLBAR & SLASH MENU BUTTON */}
+              <div className="flex flex-wrap items-center justify-between gap-2 bg-[#07080b] border border-[#d9b45c]/20 p-2 rounded-xl">
+                <div className="flex flex-wrap items-center gap-1 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setShowBlockMenu(true)}
+                    className="px-3 py-1.5 bg-[#d9b45c] text-black rounded-lg font-bold flex items-center space-x-1.5 hover:bg-[#f2d98a] transition-all"
+                  >
+                    <Plus size={14} />
+                    <span>+ Add Block</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowInternalLinkModal(true)}
+                    className="px-2.5 py-1.5 bg-[#12141b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg font-bold flex items-center space-x-1"
+                  >
+                    <Link2 size={12} />
+                    <span>Internal Link</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBlock(`<h2>Subheading (H2)</h2>\n<p>Write your section content here...</p>`)}
+                    className="px-2 py-1 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
+                    title="Insert H2 Subheading"
+                  >
+                    <Heading2 size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBlock(`<h3>Subheading (H3)</h3>\n<p>Write detailed sub-points here...</p>`)}
+                    className="px-2 py-1 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
+                    title="Insert H3 Subheading"
+                  >
+                    <Heading3 size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBlock(`<blockquote class="border-l-4 border-[#d9b45c] pl-4 italic text-[#f2d98a] my-4"><p>"Seek knowledge from the cradle to the grave."</p></blockquote>`)}
+                    className="px-2 py-1 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
+                    title="Insert Quote / Verse"
+                  >
+                    <Quote size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBlock(`<ul class="list-disc list-inside space-y-1 my-3 text-xs text-[#c9c2ab]"><li>First key principle</li><li>Second key principle</li><li>Third key principle</li></ul>`)}
+                    className="px-2 py-1 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
+                    title="Insert Bullet List"
+                  >
+                    <List size={14} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleInsertBlock(`<div class="my-6 text-center"><a href="/courses" class="inline-block bg-[#d9b45c] text-black font-bold px-6 py-3 rounded-xl hover:bg-[#f2d98a]">Enroll in Online Quran Class →</a></div>`)}
+                    className="px-2 py-1 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
+                    title="Insert Call to Action Button"
+                  >
+                    <Sparkles size={14} className="text-[#d9b45c]" />
+                  </button>
                 </div>
 
-                {/* Title / Headline */}
+                <div className="text-[10px] font-mono text-[#c9c2ab]/50">
+                  Tip: Use HTML or Slash Menu to insert blocks
+                </div>
+              </div>
+
+              {/* ARTICLE CONTENT EDITING AREA */}
+              {deviceFrame === "raw" ? (
                 <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Article Headline (H1 Title)</label>
-                  <input
-                    type="text"
-                    value={currentPost.title}
-                    onChange={(e) => handleUpdateField("title", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-sans font-bold"
-                    placeholder="Enter main headline..."
-                  />
-                </div>
-
-                {/* Excerpt */}
-                <div className="space-y-1">
-                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Excerpt / Summary Description</label>
+                  <label className="text-[10px] uppercase font-bold text-[#d9b45c]">Raw HTML Content Editor</label>
                   <textarea
-                    value={currentPost.excerpt}
-                    rows={2}
-                    onChange={(e) => handleUpdateField("excerpt", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2.5 text-xs text-[#c9c2ab] focus:outline-none focus:border-[#d9b45c] transition-colors resize-none leading-relaxed"
-                    placeholder="Summarize this article..."
-                  />
-                </div>
-
-                {/* Main Text Body with Rich Text Formatting Toolbar */}
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1.5">
-                      <span>Article Content Body</span>
-                    </label>
-
-                    {/* Rich Text Toolbar Buttons */}
-                    <div className="flex flex-wrap items-center gap-1 bg-[#07080b] p-1 rounded-lg border border-white/10">
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting("<h2>Section Heading</h2>")}
-                        className="px-2 py-0.5 text-[9px] font-bold text-[#d9b45c] hover:bg-white/10 rounded"
-                        title="Add Heading H2"
-                      >
-                        H2
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting("<h3>Subheading Title</h3>")}
-                        className="px-2 py-0.5 text-[9px] font-bold text-[#d9b45c] hover:bg-white/10 rounded"
-                        title="Add Subheading H3"
-                      >
-                        H3
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting("<b>Bold Text</b>")}
-                        className="px-2 py-0.5 text-[9px] font-bold text-white hover:bg-white/10 rounded"
-                        title="Add Bold Text"
-                      >
-                        B
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting("<i>Italic Text</i>")}
-                        className="px-2 py-0.5 text-[9px] italic text-white hover:bg-white/10 rounded"
-                        title="Add Italic Text"
-                      >
-                        I
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting('<blockquote className="border-l-4 border-[#d9b45c] pl-4 italic bg-[#07080b] p-3 rounded-r-lg my-3 font-serif text-white">"Quranic verse or scholar quote"</blockquote>')}
-                        className="px-2 py-0.5 text-[9px] font-bold text-green-400 hover:bg-white/10 rounded"
-                        title="Add Quranic Verse / Quote"
-                      >
-                        Verse Block
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting("<ul>\n  <li>Key point 1</li>\n  <li>Key point 2</li>\n</ul>")}
-                        className="px-2 py-0.5 text-[9px] font-bold text-blue-400 hover:bg-white/10 rounded"
-                        title="Add Bulleted List"
-                      >
-                        List
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => insertFormatting('<img src="https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=800&q=80" alt="Illustration" className="w-full rounded-xl my-4" />')}
-                        className="px-2 py-0.5 text-[9px] font-bold text-yellow-400 hover:bg-white/10 rounded"
-                        title="Add Inline Image"
-                      >
-                        Image
-                      </button>
-                    </div>
-
-                    <div className="flex items-center space-x-3 text-[9px] font-mono text-[#c9c2ab]/50 bg-[#07080b] px-2.5 py-1 rounded-md border border-white/5">
-                      <span className="flex items-center space-x-1">
-                        <Clock size={10} className="text-[#d9b45c]" />
-                        <span>{currentPost.readTime}</span>
-                      </span>
-                      <span>Words: <strong>{words}</strong></span>
-                    </div>
-                  </div>
-
-                  <textarea
+                    rows={16}
                     value={currentPost.content}
-                    rows={14}
                     onChange={(e) => handleUpdateField("content", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-3 text-xs text-[#c9c2ab] focus:outline-none focus:border-[#d9b45c] transition-colors font-mono leading-relaxed"
-                    placeholder="Write your content with heading tags <h2>, paragraph tags <p>, verse quotes, lists..."
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl p-4 text-xs font-mono text-green-400 focus:outline-none focus:border-[#d9b45c] leading-relaxed"
                   />
                 </div>
-
-                {/* Featured Image URL & ALT text */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
-                      <ImageIcon size={10} className="text-[#d9b45c]" />
-                      <span>Featured Image URL</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={currentPost.coverImage}
-                      onChange={(e) => handleUpdateField("coverImage", e.target.value)}
-                      className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-mono text-[11px]"
-                      placeholder="https://..."
-                    />
+              ) : (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider">Main Article Content (Gutenberg HTML)</label>
+                    <span className="text-[9px] font-mono text-[#d9b45c]">
+                      {contentStats.words} words | {contentStats.paragraphs} paragraphs
+                    </span>
                   </div>
+                  <textarea
+                    rows={18}
+                    value={currentPost.content}
+                    onChange={(e) => handleUpdateField("content", e.target.value)}
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl p-4 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors font-sans leading-relaxed resize-y"
+                    placeholder="Write article content using HTML formatting or click block buttons above..."
+                  />
+                </div>
+              )}
 
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
-                      <Tag size={10} className="text-[#d9b45c]" />
-                      <span>Featured Image ALT Text (SEO)</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={currentPost.imageAltText || ""}
-                      onChange={(e) => handleUpdateField("imageAltText", e.target.value)}
-                      className="w-full bg-[#07080b] border border-[#d9b45c]/15 rounded-xl px-4 py-2 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors"
-                      placeholder="Describe image for SEO alt text..."
-                    />
+              {/* LIVE CONTENT VISUAL PREVIEW BOX */}
+              <div className="pt-4 border-t border-white/10 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-[#d9b45c] tracking-widest flex items-center space-x-1">
+                  <Eye size={12} />
+                  <span>Rendered Article Visual Output</span>
+                </span>
+                <div className="bg-[#07080b] border border-white/5 rounded-xl p-5 text-left text-xs space-y-3 prose prose-invert max-w-none text-white leading-relaxed">
+                  <div dangerouslySetInnerHTML={{ __html: currentPost.content || "<p>No content written yet.</p>" }} />
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          {/* DEDICATED FEATURED IMAGE & IMAGE SEO PANEL */}
+          <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-5 space-y-4">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2">
+              <h3 className="text-xs font-serif font-bold text-[#d9b45c] uppercase tracking-wider flex items-center space-x-2">
+                <ImageIcon size={14} />
+                <span>Featured Image & Image SEO Metadata</span>
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowImageCropModal(true)}
+                className="px-2.5 py-1 bg-[#07080b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg text-[10px] font-bold flex items-center space-x-1"
+              >
+                <Crop size={12} />
+                <span>Image Tools</span>
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              {/* Featured Image URL */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Featured Image URL</label>
+                <input
+                  type="text"
+                  value={currentPost.coverImage}
+                  onChange={(e) => {
+                    handleUpdateField("coverImage", e.target.value);
+                    handleUpdateField("featuredImage", e.target.value);
+                    handleUpdateField("ogImage", e.target.value);
+                  }}
+                  className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-2 text-xs text-white font-mono"
+                  placeholder="https://..."
+                />
+              </div>
+
+              {/* ALT Text */}
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Image Alt Text (SEO)</label>
+                  <span className={`text-[8px] font-mono ${currentPost.imageAltText ? "text-green-400" : "text-red-400"}`}>
+                    {currentPost.imageAltText ? "Added" : "Missing"}
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={currentPost.imageAltText || ""}
+                  onChange={(e) => handleUpdateField("imageAltText", e.target.value)}
+                  className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-2 text-xs text-white"
+                  placeholder="Describe image for search engine indexing..."
+                />
+              </div>
+
+              {/* Image Title */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Image Title Attribute</label>
+                <input
+                  type="text"
+                  value={currentPost.imageTitle || ""}
+                  onChange={(e) => handleUpdateField("imageTitle", e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                  placeholder="Image title attribute..."
+                />
+              </div>
+
+              {/* File Name */}
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Image File Name (Clean Slug)</label>
+                <input
+                  type="text"
+                  value={currentPost.imageFileName || ""}
+                  onChange={(e) => handleUpdateField("imageFileName", e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+                  placeholder="tajweed-rules-banner.jpg"
+                />
+              </div>
+
+              {/* Image Caption */}
+              <div className="space-y-1 md:col-span-2">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Image Caption (Visible below photo)</label>
+                <input
+                  type="text"
+                  value={currentPost.imageCaption || ""}
+                  onChange={(e) => handleUpdateField("imageCaption", e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                  placeholder="e.g. Quran recitation session at Truth Quran Academy"
+                />
+              </div>
+            </div>
+
+            {/* Visual Cover Banner Box */}
+            {currentPost.coverImage && (
+              <div className="relative h-48 rounded-xl overflow-hidden border border-[#d9b45c]/20 mt-2">
+                <img
+                  src={currentPost.coverImage}
+                  alt={currentPost.imageAltText || "Cover Image"}
+                  className="w-full h-full object-cover"
+                  style={{
+                    filter: `brightness(${cropBrightness}%) contrast(${cropContrast}%)`
+                  }}
+                  referrerPolicy="no-referrer"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                  <div>
+                    <span className="text-[9px] uppercase font-bold bg-[#d9b45c] text-black px-2 py-0.5 rounded mr-2">
+                      {currentPost.category}
+                    </span>
+                    <h4 className="text-white text-xs font-serif font-bold mt-1">{currentPost.title}</h4>
+                    {currentPost.imageCaption && (
+                      <p className="text-[10px] text-[#c9c2ab] italic mt-0.5">{currentPost.imageCaption}</p>
+                    )}
                   </div>
                 </div>
-
-                {/* Inline visual rendering of the featured image banner */}
-                {currentPost.coverImage && (
-                  <div className="pt-2">
-                    <span className="text-[9px] uppercase font-sans font-bold text-[#c9c2ab]/50 block mb-1">Featured Cover Image Banner:</span>
-                    <div className="relative h-44 rounded-xl overflow-hidden border border-[#d9b45c]/20">
-                      <img 
-                        src={currentPost.coverImage} 
-                        alt={currentPost.imageAltText || "Featured cover banner"} 
-                        className="w-full h-full object-cover"
-                        referrerPolicy="no-referrer"
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
-                        <div>
-                          <span className="text-[8px] uppercase tracking-wider font-bold bg-[#d9b45c] text-black px-1.5 py-0.5 rounded mr-2">{currentPost.category}</span>
-                          <h4 className="text-white text-xs font-serif font-bold mt-1 line-clamp-1">{currentPost.title}</h4>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
 
-          {/* RIGHT COLUMN: THE SEO SIDEBAR (Yoast / Rank Math Pro Style) (4 cols) */}
-          <div className="xl:col-span-4 space-y-6">
-            
-            {/* 1. SEO SCORE RING & METRICS RADIAL GAUGE */}
-            <div className="bg-[#12141b] border border-[#d9b45c]/15 rounded-2xl p-5 text-center space-y-4 relative overflow-hidden shadow-lg">
-              <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" />
-              
-              <div className="flex items-center justify-between pb-1 border-b border-white/5">
-                <span className="text-[9px] uppercase font-sans font-extrabold tracking-widest text-[#d9b45c]">
-                  Rank Math Pro Live Analysis
-                </span>
-                <span className="text-[8px] font-mono text-[#c9c2ab]/50 uppercase">Active</span>
-              </div>
-              
-              <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
-                {/* SVG Circle chart */}
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke="#1e2230"
-                    strokeWidth="8"
-                    fill="transparent"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke={overallScore > 80 ? "#10b981" : overallScore > 50 ? "#f59e0b" : "#ef4444"}
-                    strokeWidth="8"
-                    fill="transparent"
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - overallScore / 100)}`}
-                    className="transition-all duration-500 ease-out"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-serif font-extrabold text-white leading-none">{overallScore}</span>
-                  <span className="text-[8px] font-sans font-bold text-[#c9c2ab]/60 uppercase tracking-widest mt-1">
-                    {overallScore > 80 ? "Excellent" : overallScore > 50 ? "Needs Work" : "Critical"}
-                  </span>
-                </div>
-              </div>
+        </div>
 
-              {/* Dynamic Metrics Badge Grid */}
-              <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-white/5">
-                <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
-                  <span className="text-[8px] uppercase tracking-wider text-[#c9c2ab]/50 block">Word Count</span>
-                  <span className="text-xs font-bold text-white font-mono">{words}</span>
-                </div>
-                <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
-                  <span className="text-[8px] uppercase tracking-wider text-[#c9c2ab]/50 block">Keyword %</span>
-                  <span className={`text-xs font-bold font-mono ${density >= 0.5 && density <= 2.5 ? "text-green-400" : "text-yellow-400"}`}>
-                    {density.toFixed(2)}%
-                  </span>
-                </div>
-                <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
-                  <span className="text-[8px] uppercase tracking-wider text-[#c9c2ab]/50 block">Readability</span>
-                  <span className={`text-xs font-bold ${readabilityScore >= 60 ? "text-green-400" : "text-yellow-500"}`}>
-                    {readabilityScore}
-                  </span>
-                </div>
-              </div>
-            </div>
+        {/* RIGHT COLUMN: RANK MATH PRO SEO SIDEBAR (4 cols) */}
+        <div className="xl:col-span-4 space-y-6">
+          
+          {/* 1. RANK MATH PRO SCORE CIRCULAR GAUGE */}
+          <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-5 text-center space-y-4 relative overflow-hidden shadow-xl">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-red-500 via-yellow-500 to-green-500" />
 
-            {/* 2. LIVE SEARCH ENGINE GOOGLE SERP PREVIEW */}
-            <div className="bg-[#12141b]/80 border border-[#d9b45c]/10 rounded-2xl p-4 space-y-2">
-              <span className="text-[9px] uppercase font-sans font-bold text-[#d9b45c] tracking-widest flex items-center space-x-1">
-                <Eye size={12} />
-                <span>Google SERP Snippet Preview</span>
+            <div className="flex items-center justify-between pb-1 border-b border-white/5">
+              <span className="text-[10px] uppercase font-sans font-extrabold tracking-widest text-[#d9b45c]">
+                Rank Math Pro Score
               </span>
-              <div className="bg-white text-black p-3.5 rounded-xl space-y-1 text-left font-sans select-text shadow-md">
-                <div className="text-[10px] text-[#202124] flex items-center space-x-1 font-sans">
-                  <span>https://truthquranacademy.com</span>
-                  <span className="text-gray-400 font-normal">› blog › {(slug || "article").toLowerCase()}</span>
-                </div>
-                <h4 className="text-sm font-sans text-[#1a0dab] hover:underline cursor-pointer font-medium leading-tight line-clamp-1">
-                  {title || `${currentPost.title} | Academy`}
-                </h4>
-                <p className="text-[11px] text-[#4d5156] leading-normal line-clamp-2 font-light">
-                  {desc || "No meta description defined. Google will automatically display text extracted from the first paragraph of your blog post instead."}
-                </p>
-              </div>
+              <span className="text-[8px] font-mono text-[#c9c2ab]/50 uppercase">Live Analysis</span>
             </div>
 
-            {/* 3. DYNAMIC SEO RECOMMENDATIONS PANEL */}
-            <div className="bg-[#12141b]/60 border border-[#d9b45c]/12 rounded-2xl p-5 space-y-3">
-              <h3 className="text-xs font-sans font-extrabold text-[#f3ecd8] uppercase tracking-widest flex items-center justify-between pb-1.5 border-b border-[#d9b45c]/10">
-                <span>Recommendations to Fix</span>
-                <span className="text-[8px] font-mono text-[#d9b45c] bg-[#d9b45c]/5 border border-[#d9b45c]/15 px-2 py-0.5 rounded">
-                  {recommendationsList.length} REMAINING
+            {/* Circular Gauge */}
+            <div className="relative w-32 h-32 mx-auto flex items-center justify-center">
+              <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" stroke="#1e2230" strokeWidth="8" fill="transparent" />
+                <circle
+                  cx="50"
+                  cy="50"
+                  r="40"
+                  stroke={seoAnalysis.score >= 80 ? "#10b981" : seoAnalysis.score >= 50 ? "#f59e0b" : "#ef4444"}
+                  strokeWidth="8"
+                  fill="transparent"
+                  strokeDasharray={`${2 * Math.PI * 40}`}
+                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - seoAnalysis.score / 100)}`}
+                  className="transition-all duration-500 ease-out"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-4xl font-serif font-extrabold text-white leading-none">{seoAnalysis.score}</span>
+                <span className="text-[8px] font-sans font-bold text-[#c9c2ab]/60 uppercase tracking-widest mt-1">
+                  {seoAnalysis.score >= 80 ? "Great" : seoAnalysis.score >= 50 ? "Needs Work" : "Poor"}
                 </span>
-              </h3>
-
-              <div className="space-y-2.5 max-h-[250px] overflow-y-auto pr-1">
-                {recommendationsList.length > 0 ? (
-                  recommendationsList.map((rec, idx) => (
-                    <div key={idx} className="flex items-start space-x-2 text-xs bg-[#ef4444]/5 border border-[#ef4444]/10 rounded-lg p-2.5">
-                      <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <span className="font-sans font-extrabold block text-[10px] uppercase text-red-400">
-                          {rec}
-                        </span>
-                        <p className="text-[9px] text-[#c9c2ab] leading-snug mt-0.5">
-                          {rec === "Missing Focus Keyword" ? "Add a Focus Keyword to the sidebar input to unlock full analysis." :
-                           rec === "Meta Description is too short" ? "Write a meta description between 100-160 characters containing your keyword." :
-                           rec === "Add more Internal Links" ? "Link to other pages of Truth Quran Academy to pass site architecture tests." :
-                           rec === "Add at least one External Link" ? "Add links pointing to authority education sites like Wikipedia or scholars." :
-                           rec === "Increase Word Count" ? "Write at least 300 words (ideally 600+) for substantial coverage." :
-                           rec === "Improve Keyword Density" ? "Maintain focus keyword repetition density between 0.5% and 2.5%." :
-                           rec === "Add Image ALT Text" ? "Add a short description inside the featured image Alt Text box." :
-                           rec === "Add FAQ Schema" ? "Choose the FAQ Schema preset and compile dynamic structured data." :
-                           "Organize with hierarchical subheadings (H2, H3) and insert focus keywords."}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-center p-6 bg-green-500/5 border border-green-500/10 rounded-xl space-y-2">
-                    <Check size={28} className="text-green-400" />
-                    <span className="text-[11px] font-sans font-bold text-green-400 uppercase tracking-wider">All checks passed!</span>
-                    <p className="text-[9px] text-[#c9c2ab]">Your blog article is 100% on-page SEO optimized and ready for publishing.</p>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* 4. THE INTEGRATED SEO SIDEBAR CONFIG PANEL */}
-            <div className="space-y-3">
-              
-              {/* SECTION A: KEYWORD & TITLE META (Accordion) */}
-              <div className="bg-[#12141b]/50 border border-white/5 rounded-xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("meta")}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b]/80 text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-[#d9b45c]/5 transition-colors text-left"
+            {/* Metric Cards Grid */}
+            <div className="grid grid-cols-3 gap-2 text-center pt-2 border-t border-white/5 text-xs">
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[8px] uppercase tracking-wider text-[#c9c2ab]/50 block">Word Count</span>
+                <span className="font-bold text-white font-mono">{contentStats.words}</span>
+              </div>
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[8px] uppercase tracking-wider text-[#c9c2ab]/50 block">Keyword %</span>
+                <span className={`font-bold font-mono ${seoAnalysis.keywordDensity >= 0.5 && seoAnalysis.keywordDensity <= 2.5 ? "text-green-400" : "text-yellow-400"}`}>
+                  {seoAnalysis.keywordDensity.toFixed(1)}%
+                </span>
+              </div>
+              <div className="bg-[#07080b] p-2 rounded-xl border border-white/5">
+                <span className="text-[8px] uppercase tracking-wider text-[#c9c2ab]/50 block">Readability</span>
+                <span className={`font-bold ${seoAnalysis.readability >= 60 ? "text-green-400" : "text-yellow-500"}`}>
+                  {seoAnalysis.readability}/100
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. LIVE GOOGLE SERP PREVIEW */}
+          <div className="bg-[#12141b]/80 border border-[#d9b45c]/10 rounded-2xl p-4 space-y-2">
+            <span className="text-[10px] uppercase font-sans font-bold text-[#d9b45c] tracking-widest flex items-center space-x-1">
+              <Eye size={12} />
+              <span>Google SERP Snippet Preview</span>
+            </span>
+            <div className="bg-white text-black p-3.5 rounded-xl space-y-1 text-left font-sans select-text shadow-md">
+              <div className="text-[10px] text-[#202124] flex items-center space-x-1 font-sans">
+                <span>https://truthquranacademy.com</span>
+                <span className="text-gray-400 font-normal">› blog › {(currentPost.slug || "article").toLowerCase()}</span>
+              </div>
+              <h4 className="text-sm font-sans text-[#1a0dab] hover:underline cursor-pointer font-medium leading-tight line-clamp-1">
+                {currentPost.metaTitle || currentPost.title}
+              </h4>
+              <p className="text-[11px] text-[#4d5156] leading-normal line-clamp-2 font-light">
+                {currentPost.metaDescription || currentPost.excerpt || "No meta description provided."}
+              </p>
+            </div>
+          </div>
+
+          {/* 3. RANK MATH AUDIT CHECKS & RECOMMENDATIONS */}
+          <div className="bg-[#12141b]/70 border border-[#d9b45c]/15 rounded-2xl p-4 space-y-3">
+            <h3 className="text-xs font-sans font-extrabold text-[#f3ecd8] uppercase tracking-widest flex items-center justify-between pb-2 border-b border-white/5">
+              <span>SEO Audit Checklist</span>
+              <span className="text-[9px] font-mono text-[#d9b45c] bg-[#d9b45c]/10 px-2 py-0.5 rounded">
+                {seoAnalysis.passedCount} / {seoAnalysis.rules.length} Passed
+              </span>
+            </h3>
+
+            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 text-xs">
+              {seoAnalysis.rules.map((rule) => (
+                <div
+                  key={rule.id}
+                  className={`p-2.5 rounded-xl border flex items-start space-x-2 ${
+                    rule.passed
+                      ? "bg-green-500/5 border-green-500/20 text-green-300"
+                      : "bg-red-500/5 border-red-500/20 text-red-300"
+                  }`}
                 >
-                  <span className="flex items-center space-x-2">
-                    <Sparkles size={13} className="text-[#d9b45c]" />
-                    <span>Focus Keyword & Snippet</span>
-                  </span>
-                  {expandedSections.meta ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
+                  {rule.passed ? (
+                    <Check size={14} className="text-green-400 flex-shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertTriangle size={14} className="text-red-400 flex-shrink-0 mt-0.5" />
+                  )}
+                  <div>
+                    <span className="font-bold text-[10px] uppercase block">{rule.label}</span>
+                    <p className="text-[10px] text-[#c9c2ab] leading-snug mt-0.5">{rule.feedback}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
 
-                {expandedSections.meta && (
-                  <div className="p-4 space-y-3.5">
-                    {/* Focus Keyword */}
+          {/* 4. INTEGRATED EDITABLE SEO ACCORDIONS */}
+          <div className="space-y-3">
+            
+            {/* ACCORDION A: FOCUS KEYWORD & SNIPPET (UNLOCKED FULLY EDITABLE) */}
+            <div className="bg-[#12141b] border border-white/10 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection("meta")}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b] text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-white/5 transition-colors text-left"
+              >
+                <span className="flex items-center space-x-2">
+                  <Sparkles size={14} className="text-[#d9b45c]" />
+                  <span>Focus Keyword & Snippet Editor</span>
+                </span>
+                {expandedSections.meta ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+
+              {expandedSections.meta && (
+                <div className="p-4 space-y-3.5 text-xs">
+                  {/* Focus Keyword */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Focus Keyword</label>
+                    <input
+                      type="text"
+                      value={currentPost.focusKeyword || ""}
+                      onChange={(e) => handleUpdateField("focusKeyword", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-lg px-3 py-1.5 text-xs text-[#f2d98a] font-bold outline-none focus:border-[#d9b45c]"
+                      placeholder="e.g. Tajweed Rules"
+                    />
+                  </div>
+
+                  {/* SEO Title Tag & Counter */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">SEO Title Tag</label>
+                      <span className={`text-[9px] font-mono ${
+                        (currentPost.metaTitle || "").length >= 50 && (currentPost.metaTitle || "").length <= 60
+                          ? "text-green-400"
+                          : "text-yellow-400"
+                      }`}>
+                        {(currentPost.metaTitle || "").length}/60 chars
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      value={currentPost.metaTitle || ""}
+                      onChange={(e) => handleUpdateField("metaTitle", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-[#d9b45c]"
+                      placeholder="SEO Title..."
+                    />
+                  </div>
+
+                  {/* Slug */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">URL Slug</label>
+                    <input
+                      type="text"
+                      value={currentPost.slug || ""}
+                      onChange={(e) => handleUpdateField("slug", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white font-mono outline-none focus:border-[#d9b45c]"
+                      placeholder="slug"
+                    />
+                  </div>
+
+                  {/* Meta Description & Counter */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Meta Description</label>
+                      <span className={`text-[9px] font-mono ${
+                        (currentPost.metaDescription || "").length >= 100 && (currentPost.metaDescription || "").length <= 160
+                          ? "text-green-400"
+                          : "text-yellow-400"
+                      }`}>
+                        {(currentPost.metaDescription || "").length}/160 chars
+                      </span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={currentPost.metaDescription || ""}
+                      onChange={(e) => handleUpdateField("metaDescription", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-[#c9c2ab] outline-none focus:border-[#d9b45c] resize-none"
+                      placeholder="Write a concise meta snippet..."
+                    />
+                  </div>
+
+                  {/* Robots Meta Tag */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Robots Meta Tag</label>
+                    <select
+                      value={currentPost.robotsMeta || "index, follow"}
+                      onChange={(e) => handleUpdateField("robotsMeta", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none"
+                    >
+                      <option value="index, follow">index, follow (Default - Recommended)</option>
+                      <option value="noindex, follow">noindex, follow (Hide from search)</option>
+                      <option value="index, nofollow">index, nofollow (Do not follow links)</option>
+                      <option value="noindex, nofollow">noindex, nofollow (Private post)</option>
+                    </select>
+                  </div>
+
+                  {/* Canonical URL */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Canonical URL Override</label>
+                    <input
+                      type="text"
+                      value={currentPost.canonicalUrl || ""}
+                      onChange={(e) => handleUpdateField("canonicalUrl", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
+                      placeholder="https://..."
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* ACCORDION B: LINKS & TAXONOMIES */}
+            <div className="bg-[#12141b] border border-white/10 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection("links")}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b] text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-white/5 transition-colors text-left"
+              >
+                <span className="flex items-center space-x-2">
+                  <Link2 size={14} className="text-[#d9b45c]" />
+                  <span>Links, Categories & Tags</span>
+                </span>
+                {expandedSections.links ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
+
+              {expandedSections.links && (
+                <div className="p-4 space-y-3.5 text-xs">
+                  {/* Category Selection */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Primary Category</label>
+                    <select
+                      value={currentPost.category}
+                      onChange={(e) => handleUpdateField("category", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-[#d9b45c]"
+                    >
+                      <option value="Tajweed Rules">Tajweed Rules</option>
+                      <option value="Hifz Guide">Hifz Guide</option>
+                      <option value="Quranic Arabic">Quranic Arabic</option>
+                      <option value="Parenting Guide">Parenting Guide</option>
+                      <option value="Academy Lectures">Academy Lectures</option>
+                    </select>
+                  </div>
+
+                  {/* Tags */}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Tags (comma separated)</label>
+                    <input
+                      type="text"
+                      value={currentPost.tags ? currentPost.tags.join(", ") : ""}
+                      onChange={(e) =>
+                        handleUpdateField(
+                          "tags",
+                          e.target.value.split(",").map((t) => t.trim()).filter(Boolean)
+                        )
+                      }
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none"
+                      placeholder="Tajweed, Recitation, Hifz"
+                    />
+                  </div>
+
+                  {/* Link Counters */}
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Focus Keyword</label>
-                        <span className="text-[8px] font-mono text-[#d9b45c] bg-[#d9b45c]/5 px-1 rounded">PRO</span>
-                      </div>
+                      <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Internal Links</label>
                       <input
-                        type="text"
-                        value={currentPost.focusKeyword || ""}
-                        onChange={(e) => handleUpdateField("focusKeyword", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-[#f2d98a] font-bold outline-none focus:border-[#d9b45c]"
-                        placeholder="e.g. Tajweed"
+                        type="number"
+                        value={currentPost.internalLinksCount || 0}
+                        onChange={(e) => handleUpdateField("internalLinksCount", parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white font-bold text-center"
                       />
                     </div>
-
-                    {/* SEO Title */}
                     <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">SEO Title Tag</label>
+                      <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">External Links</label>
                       <input
-                        type="text"
-                        value={currentPost.metaTitle || ""}
-                        onChange={(e) => handleUpdateField("metaTitle", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-[#d9b45c]"
-                        placeholder="Fallback to Article Title..."
-                      />
-                    </div>
-
-                    {/* Slug */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">URL Slug</label>
-                      <input
-                        type="text"
-                        value={currentPost.slug || ""}
-                        onChange={(e) => handleUpdateField("slug", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white font-mono outline-none focus:border-[#d9b45c]"
-                        placeholder="rules-of-tajweed"
-                      />
-                    </div>
-
-                    {/* Meta Description */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Meta Description</label>
-                        <span className={`text-[8px] font-mono ${desc.length >= 100 && desc.length <= 160 ? "text-green-400" : "text-yellow-500"}`}>
-                          {desc.length}/160 chars
-                        </span>
-                      </div>
-                      <textarea
-                        value={currentPost.metaDescription || ""}
-                        rows={3}
-                        onChange={(e) => handleUpdateField("metaDescription", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-[#c9c2ab] outline-none focus:border-[#d9b45c] resize-none leading-relaxed"
-                        placeholder="Write a concise meta snippet..."
+                        type="number"
+                        value={currentPost.externalLinksCount || 0}
+                        onChange={(e) => handleUpdateField("externalLinksCount", parseInt(e.target.value) || 0)}
+                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white font-bold text-center"
                       />
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+            </div>
 
-              {/* SECTION B: LINKS & TAXONOMIES (Accordion) */}
-              <div className="bg-[#12141b]/50 border border-white/5 rounded-xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("links")}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b]/80 text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-[#d9b45c]/5 transition-colors text-left"
-                >
-                  <span className="flex items-center space-x-2">
-                    <Link2 size={13} className="text-[#d9b45c]" />
-                    <span>Links & Organization</span>
-                  </span>
-                  {expandedSections.links ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
+            {/* ACCORDION C: SCHEMA & STRUCTURED DATA */}
+            <div className="bg-[#12141b] border border-white/10 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection("schema")}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b] text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-white/5 transition-colors text-left"
+              >
+                <span className="flex items-center space-x-2">
+                  <Code size={14} className="text-[#d9b45c]" />
+                  <span>Schema Markup & Structured Data</span>
+                </span>
+                {expandedSections.schema ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
 
-                {expandedSections.links && (
-                  <div className="p-4 space-y-3.5">
-                    {/* Tags */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Tags (comma-separated)</label>
-                      <input
-                        type="text"
-                        value={currentPost.tags ? currentPost.tags.join(", ") : ""}
-                        onChange={(e) => handleUpdateField("tags", e.target.value.split(",").map(t => t.trim()).filter(Boolean))}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none"
-                        placeholder="Tajweed, Recitation, Hifz"
-                      />
-                      {currentPost.tags && currentPost.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1.5">
-                          {currentPost.tags.map((tag, idx) => (
-                            <span key={idx} className="bg-[#d9b45c]/10 text-[#f2d98a] border border-[#d9b45c]/20 text-[9px] px-1.5 py-0.5 rounded font-sans font-bold">
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Category Selection */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Primary Category</label>
-                      <select
-                        value={currentPost.category}
-                        onChange={(e) => handleUpdateField("category", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none focus:border-[#d9b45c]"
-                      >
-                        <option value="Tajweed Rules">Tajweed Rules</option>
-                        <option value="Hifz Guide">Hifz Guide</option>
-                        <option value="Quranic Arabic">Quranic Arabic</option>
-                        <option value="Parenting Guide">Parenting Guide</option>
-                        <option value="Academy Lectures">Academy Lectures</option>
-                      </select>
-                    </div>
-
-                    {/* Custom simulated links counting */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Internal Links</label>
-                        <input
-                          type="number"
-                          value={currentPost.internalLinksCount || 0}
-                          onChange={(e) => handleUpdateField("internalLinksCount", parseInt(e.target.value) || 0)}
-                          className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white text-center font-bold"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">External Links</label>
-                        <input
-                          type="number"
-                          value={currentPost.externalLinksCount || 0}
-                          onChange={(e) => handleUpdateField("externalLinksCount", parseInt(e.target.value) || 0)}
-                          className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white text-center font-bold"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Canonical URL */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Canonical URL Override</label>
-                      <input
-                        type="text"
-                        value={currentPost.canonicalUrl || ""}
-                        onChange={(e) => handleUpdateField("canonicalUrl", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white font-mono"
-                        placeholder="https://..."
-                      />
-                    </div>
+              {expandedSections.schema && (
+                <div className="p-4 space-y-3.5 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Schema Type</label>
+                    <select
+                      value={currentPost.schemaType || "Article"}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        handleUpdateField("schemaType", val);
+                        handleUpdateField("customSchemaJson", JSON.stringify({
+                          "@context": "https://schema.org",
+                          "@type": val === "FAQPage" ? "FAQPage" : val === "HowTo" ? "HowTo" : "Article",
+                          "headline": currentPost.title,
+                          "description": currentPost.excerpt
+                        }, null, 2));
+                      }}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg px-3 py-1.5 text-xs text-white outline-none"
+                    >
+                      <option value="Article">Article Schema</option>
+                      <option value="BlogPosting">BlogPosting Schema</option>
+                      <option value="FAQPage">FAQPage Schema</option>
+                      <option value="HowTo">HowTo Guide Schema</option>
+                      <option value="Course">Course Reference Schema</option>
+                    </select>
                   </div>
-                )}
-              </div>
 
-              {/* SECTION C: SCHEMA & STRUCTURED DATA (Accordion) */}
-              <div className="bg-[#12141b]/50 border border-white/5 rounded-xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("schema")}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b]/80 text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-[#d9b45c]/5 transition-colors text-left"
-                >
-                  <span className="flex items-center space-x-2">
-                    <Code size={13} className="text-[#d9b45c]" />
-                    <span>Schema Markup & Structured Data</span>
-                  </span>
-                  {expandedSections.schema ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-
-                {expandedSections.schema && (
-                  <div className="p-4 space-y-3.5">
-                    {/* Schema Type Preset */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab] block">Apply Schema Preset</label>
-                      <div className="flex flex-wrap gap-1.5">
-                        {schemaPresets.map(preset => (
-                          <button
-                            type="button"
-                            key={preset.type}
-                            onClick={() => handleApplySchemaPreset(preset.type)}
-                            className={`px-2 py-1 rounded text-[8px] font-sans font-bold uppercase border transition-all cursor-pointer ${
-                              currentPost.schemaType === preset.type
-                                ? "bg-[#d9b45c] text-black border-[#d9b45c]"
-                                : "bg-[#07080b] text-[#c9c2ab] border-white/10 hover:border-white/30"
-                            }`}
-                          >
-                            {preset.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Schema JSON Textarea with Validation Badge */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">LD+JSON Schema Output</label>
-                        {isSchemaValidJson ? (
-                          <span className="text-[8px] font-mono bg-green-500/10 text-green-400 border border-green-500/20 px-1 py-0.5 rounded font-bold uppercase">
-                            Validated
-                          </span>
-                        ) : (
-                          <span className="text-[8px] font-mono bg-red-500/10 text-red-400 border border-red-500/20 px-1 py-0.5 rounded font-bold uppercase">
-                            Syntax Error
-                          </span>
-                        )}
-                      </div>
-                      <textarea
-                        value={currentPost.customSchemaJson || ""}
-                        rows={6}
-                        onChange={(e) => handleUpdateField("customSchemaJson", e.target.value)}
-                        className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg p-2 text-xs text-green-400 font-mono leading-normal focus:border-[#d9b45c]"
-                      />
-                    </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">LD+JSON Schema Output</label>
+                    <textarea
+                      rows={6}
+                      value={currentPost.customSchemaJson || ""}
+                      onChange={(e) => handleUpdateField("customSchemaJson", e.target.value)}
+                      className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-lg p-2.5 text-xs text-green-400 font-mono leading-normal focus:border-[#d9b45c]"
+                    />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+            </div>
 
-              {/* SECTION D: SOCIAL SHARE PREVIEWS & OPEN GRAPH (Accordion) */}
-              <div className="bg-[#12141b]/50 border border-white/5 rounded-xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("social")}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b]/80 text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-[#d9b45c]/5 transition-colors text-left"
-                >
-                  <span className="flex items-center space-x-2">
-                    <Share2 size={13} className="text-[#d9b45c]" />
-                    <span>Social Media Previews</span>
-                  </span>
-                  {expandedSections.social ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
+            {/* ACCORDION D: SOCIAL MEDIA PREVIEWS & OPEN GRAPH */}
+            <div className="bg-[#12141b] border border-white/10 rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleSection("social")}
+                className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b] text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-white/5 transition-colors text-left"
+              >
+                <span className="flex items-center space-x-2">
+                  <Share2 size={14} className="text-[#d9b45c]" />
+                  <span>Social Media Previews (OG)</span>
+                </span>
+                {expandedSections.social ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+              </button>
 
-                {expandedSections.social && (
-                  <div className="p-4 space-y-3.5">
-                    {/* OG Title */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Facebook / LinkedIn Title (og:title)</label>
-                      <input
-                        type="text"
-                        value={currentPost.ogTitle || ""}
-                        onChange={(e) => handleUpdateField("ogTitle", e.target.value)}
-                        className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
-                        placeholder="Custom title for FB shares..."
-                      />
-                    </div>
-
-                    {/* OG Description */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Social Description (og:description)</label>
-                      <textarea
-                        value={currentPost.ogDescription || ""}
-                        rows={2}
-                        onChange={(e) => handleUpdateField("ogDescription", e.target.value)}
-                        className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white resize-none"
-                        placeholder="Custom summary description for FB shares..."
-                      />
-                    </div>
-
-                    {/* OG Image */}
-                    <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Share Banner URL (og:image)</label>
-                      <input
-                        type="text"
-                        value={currentPost.ogImage || ""}
-                        onChange={(e) => handleUpdateField("ogImage", e.target.value)}
-                        className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white font-mono text-[10px]"
-                        placeholder="https://..."
-                      />
-                    </div>
-
-                    {/* Twitter Card Selector */}
-                    <div className="space-y-1.5">
-                      <label className="text-[9px] uppercase font-bold text-[#c9c2ab]">Twitter/X Card Type</label>
-                      <select
-                        value={currentPost.twitterCard || "summary_large_image"}
-                        onChange={(e) => handleUpdateField("twitterCard", e.target.value)}
-                        className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
-                      >
-                        <option value="summary">summary</option>
-                        <option value="summary_large_image">summary_large_image</option>
-                        <option value="app">app</option>
-                        <option value="player">player</option>
-                      </select>
-                    </div>
+              {expandedSections.social && (
+                <div className="p-4 space-y-3.5 text-xs">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Facebook / LinkedIn Title (og:title)</label>
+                    <input
+                      type="text"
+                      value={currentPost.ogTitle || ""}
+                      onChange={(e) => handleUpdateField("ogTitle", e.target.value)}
+                      className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                      placeholder="Social title..."
+                    />
                   </div>
-                )}
-              </div>
 
-              {/* SECTION E: PASSED AUDITS (Accordion) */}
-              <div className="bg-[#12141b]/50 border border-white/5 rounded-xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleSection("passed")}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-[#12141b]/80 text-[#f3ecd8] font-sans font-bold text-xs uppercase tracking-wider border-b border-white/5 hover:bg-[#d9b45c]/5 transition-colors text-left"
-                >
-                  <span className="flex items-center space-x-2">
-                    <Check size={13} className="text-green-400" />
-                    <span>Passed Audits ({passedCount})</span>
-                  </span>
-                  {expandedSections.passed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                </button>
-
-                {expandedSections.passed && (
-                  <div className="p-4 space-y-2 max-h-[250px] overflow-y-auto pr-1">
-                    {rules.filter(r => r.passed).map((rule, idx) => (
-                      <div key={idx} className="flex items-start space-x-2 text-[11px] pb-1.5 border-b border-white/5 last:border-b-0 last:pb-0">
-                        <Check size={12} className="text-green-400 flex-shrink-0 mt-0.5" />
-                        <div>
-                          <span className="font-sans font-bold text-green-400 text-[9px] uppercase block">{rule.label}</span>
-                          <span className="text-[#c9c2ab] text-[9px] font-sans block leading-snug">{rule.feedback}</span>
-                        </div>
-                      </div>
-                    ))}
-                    {passedCount === 0 && (
-                      <div className="text-[10px] text-[#c9c2ab]/50 text-center py-2">No audits passed yet.</div>
-                    )}
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Twitter/X Title</label>
+                    <input
+                      type="text"
+                      value={currentPost.twitterTitle || currentPost.ogTitle || ""}
+                      onChange={(e) => handleUpdateField("twitterTitle", e.target.value)}
+                      className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                      placeholder="Twitter title..."
+                    />
                   </div>
-                )}
-              </div>
 
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Social Description (og:description)</label>
+                    <textarea
+                      rows={2}
+                      value={currentPost.ogDescription || ""}
+                      onChange={(e) => handleUpdateField("ogDescription", e.target.value)}
+                      className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white resize-none"
+                      placeholder="Social description..."
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Twitter Card Type</label>
+                    <select
+                      value={currentPost.twitterCard || "summary_large_image"}
+                      onChange={(e) => handleUpdateField("twitterCard", e.target.value)}
+                      className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white"
+                    >
+                      <option value="summary_large_image">summary_large_image</option>
+                      <option value="summary">summary</option>
+                    </select>
+                  </div>
+                </div>
+              )}
             </div>
 
           </div>
 
         </div>
-      ) : (
-        <div className="p-12 text-center bg-[#12141b] rounded-2xl border border-[#d9b45c]/10 text-[#c9c2ab]">
-          No posts available in the simulator database. Create one to get started!
+
+      </div>
+
+      {/* POPUP MODAL 1: GUTENBERG BLOCK INSERTER MENU */}
+      {showBlockMenu && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="font-serif text-lg font-bold text-[#d9b45c] flex items-center space-x-2">
+                <Plus size={18} />
+                <span>Insert Gutenberg Block</span>
+              </h3>
+              <button onClick={() => setShowBlockMenu(false)} className="p-1 hover:bg-white/10 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-3 text-[#c9c2ab]" />
+              <input
+                type="text"
+                value={blockSearch}
+                onChange={(e) => setBlockSearch(e.target.value)}
+                placeholder="Search blocks (Heading, Quote, Button, Download...)"
+                className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl pl-9 pr-3 py-2 text-xs text-white outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-1 text-xs">
+              <button
+                onClick={() => handleInsertBlock(`<h2>Heading 2</h2>`)}
+                className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left space-y-1 transition-all"
+              >
+                <Heading2 size={16} className="text-[#d9b45c]" />
+                <span className="font-bold text-white block">Heading H2</span>
+                <span className="text-[10px] text-[#c9c2ab]/60 block">Section header</span>
+              </button>
+
+              <button
+                onClick={() => handleInsertBlock(`<h3>Heading 3</h3>`)}
+                className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left space-y-1 transition-all"
+              >
+                <Heading3 size={16} className="text-[#d9b45c]" />
+                <span className="font-bold text-white block">Heading H3</span>
+                <span className="text-[10px] text-[#c9c2ab]/60 block">Sub-section header</span>
+              </button>
+
+              <button
+                onClick={() => handleInsertBlock(`<blockquote class="border-l-4 border-[#d9b45c] pl-4 italic text-[#f2d98a] my-4"><p>"The best among you are those who learn the Quran and teach it." - Prophet Muhammad (ﷺ)</p></blockquote>`)}
+                className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left space-y-1 transition-all"
+              >
+                <Quote size={16} className="text-[#d9b45c]" />
+                <span className="font-bold text-white block">Quran / Hadith Callout</span>
+                <span className="text-[10px] text-[#c9c2ab]/60 block">Styled verse quote</span>
+              </button>
+
+              <button
+                onClick={() => handleInsertBlock(`<div class="my-6 p-4 bg-[#07080b] border border-[#d9b45c]/30 rounded-2xl flex flex-col items-center text-center space-y-2"><h4 class="text-sm font-bold text-[#f2d98a]">Free Trial Quran Class</h4><p class="text-xs text-[#c9c2ab]">Book 3 days free trial with expert tutor.</p><a href="/courses" class="bg-[#d9b45c] text-black font-bold px-5 py-2 rounded-xl text-xs">Book Free Trial →</a></div>`)}
+                className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left space-y-1 transition-all"
+              >
+                <Sparkles size={16} className="text-[#d9b45c]" />
+                <span className="font-bold text-white block">CTA Box</span>
+                <span className="text-[10px] text-[#c9c2ab]/60 block">Free trial banner</span>
+              </button>
+
+              <button
+                onClick={() => handleInsertBlock(`<div class="my-6 p-4 bg-[#07080b] border border-white/10 rounded-xl flex items-center justify-between"><div className="space-y-1"><span class="text-xs font-bold text-white block">Download Quran Para / Qaida PDF</span><span class="text-[10px] text-[#c9c2ab] block">Branded with Truth Quran Academy</span></div><a href="/quran-download" class="px-4 py-2 bg-[#d9b45c] text-black font-bold rounded-lg text-xs">Download PDF →</a></div>`)}
+                className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left space-y-1 transition-all"
+              >
+                <FileDown size={16} className="text-[#d9b45c]" />
+                <span className="font-bold text-white block">PDF Download Button</span>
+                <span className="text-[10px] text-[#c9c2ab]/60 block">Branded Quran PDF</span>
+              </button>
+
+              <button
+                onClick={() => handleInsertBlock(`<div class="my-4 overflow-x-auto"><table class="w-full border border-white/10 text-xs"><thead><tr class="bg-[#12141b] text-[#d9b45c]"><th class="p-2 border border-white/10">Tajweed Rule</th><th class="p-2 border border-white/10">Description</th></tr></thead><tbody><tr><td class="p-2 border border-white/10">Ghunnah</td><td class="p-2 border border-white/10">Nasal sound for 2 counts</td></tr></tbody></table></div>`)}
+                className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left space-y-1 transition-all"
+              >
+                <Table size={16} className="text-[#d9b45c]" />
+                <span className="font-bold text-white block">Data Table</span>
+                <span className="text-[10px] text-[#c9c2ab]/60 block">Rules comparison</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
+
+      {/* POPUP MODAL 2: SMART INTERNAL LINK SEARCH */}
+      {showInternalLinkModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl w-full max-w-lg p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="font-serif text-lg font-bold text-[#d9b45c] flex items-center space-x-2">
+                <Link2 size={18} />
+                <span>Insert Smart Internal Link</span>
+              </h3>
+              <button onClick={() => setShowInternalLinkModal(false)} className="p-1 hover:bg-white/10 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="flex space-x-1 border-b border-white/10 pb-2 text-xs">
+              <button
+                onClick={() => setInternalLinkTab("posts")}
+                className={`px-3 py-1.5 rounded-lg font-bold ${
+                  internalLinkTab === "posts" ? "bg-[#d9b45c] text-black" : "bg-[#07080b] text-[#c9c2ab]"
+                }`}
+              >
+                Blog Articles ({posts.length})
+              </button>
+              <button
+                onClick={() => setInternalLinkTab("pages")}
+                className={`px-3 py-1.5 rounded-lg font-bold ${
+                  internalLinkTab === "pages" ? "bg-[#d9b45c] text-black" : "bg-[#07080b] text-[#c9c2ab]"
+                }`}
+              >
+                Pages (7)
+              </button>
+              <button
+                onClick={() => setInternalLinkTab("courses")}
+                className={`px-3 py-1.5 rounded-lg font-bold ${
+                  internalLinkTab === "courses" ? "bg-[#d9b45c] text-black" : "bg-[#07080b] text-[#c9c2ab]"
+                }`}
+              >
+                Courses ({cmsData.courses?.length || 0})
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 text-xs">
+              {internalLinkTab === "posts" &&
+                posts.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => handleSelectInternalLink(`/blog/${p.slug || p.id}`, p.title)}
+                    className="w-full p-2.5 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left flex items-center justify-between"
+                  >
+                    <div>
+                      <span className="font-bold text-white block">{p.title}</span>
+                      <span className="text-[10px] text-[#c9c2ab]/50 block">/blog/{p.slug}</span>
+                    </div>
+                    <span className="text-[10px] text-[#d9b45c] font-bold">Insert →</span>
+                  </button>
+                ))}
+
+              {internalLinkTab === "pages" && (
+                <>
+                  <button
+                    onClick={() => handleSelectInternalLink("/courses", "Quran Courses & Programs")}
+                    className="w-full p-2.5 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left flex items-center justify-between"
+                  >
+                    <span className="font-bold text-white">Quran Courses & Fee Plans</span>
+                    <span className="text-[10px] text-[#d9b45c] font-bold">Insert →</span>
+                  </button>
+                  <button
+                    onClick={() => handleSelectInternalLink("/quran-download", "Quran 30 Paras & Qaida Download")}
+                    className="w-full p-2.5 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left flex items-center justify-between"
+                  >
+                    <span className="font-bold text-white">Quran 30 Paras & Qaida PDF Download</span>
+                    <span className="text-[10px] text-[#d9b45c] font-bold">Insert →</span>
+                  </button>
+                  <button
+                    onClick={() => handleSelectInternalLink("/teachers", "Expert Quran Teachers & Scholars")}
+                    className="w-full p-2.5 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left flex items-center justify-between"
+                  >
+                    <span className="font-bold text-white">Teachers & Scholars</span>
+                    <span className="text-[10px] text-[#d9b45c] font-bold">Insert →</span>
+                  </button>
+                </>
+              )}
+
+              {internalLinkTab === "courses" &&
+                (cmsData.courses || []).map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleSelectInternalLink("/courses", c.title)}
+                    className="w-full p-2.5 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 rounded-xl text-left flex items-center justify-between"
+                  >
+                    <div>
+                      <span className="font-bold text-white block">{c.title}</span>
+                      <span className="text-[10px] text-[#c9c2ab]/50 block">{c.tag || c.difficulty}</span>
+                    </div>
+                    <span className="text-[10px] text-[#d9b45c] font-bold">Insert →</span>
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL 3: FEATURED IMAGE TOOLS */}
+      {showImageCropModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <h3 className="font-serif text-lg font-bold text-[#d9b45c] flex items-center space-x-2">
+                <Crop size={18} />
+                <span>Featured Image Adjustments</span>
+              </h3>
+              <button onClick={() => setShowImageCropModal(false)} className="p-1 hover:bg-white/10 rounded-lg text-white">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Brightness ({cropBrightness}%)</label>
+                <input
+                  type="range"
+                  min={50}
+                  max={150}
+                  value={cropBrightness}
+                  onChange={(e) => setCropBrightness(parseInt(e.target.value))}
+                  className="w-full accent-[#d9b45c]"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Contrast ({cropContrast}%)</label>
+                <input
+                  type="range"
+                  min={50}
+                  max={150}
+                  value={cropContrast}
+                  onChange={(e) => setCropContrast(parseInt(e.target.value))}
+                  className="w-full accent-[#d9b45c]"
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  setCropBrightness(100);
+                  setCropContrast(100);
+                }}
+                className="w-full py-2 bg-[#07080b] text-[#c9c2ab] hover:text-white rounded-xl text-xs font-bold border border-white/10"
+              >
+                Reset Adjustments
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

@@ -94,11 +94,19 @@ export interface BlogPost {
   ogTitle?: string;
   ogDescription?: string;
   ogImage?: string;
+  twitterTitle?: string;
+  twitterDescription?: string;
   twitterCard?: string;
   featuredImage?: string;
   imageAltText?: string;
+  imageTitle?: string;
+  imageCaption?: string;
+  imageDescription?: string;
+  imageFileName?: string;
   publishDate?: string;
   wordCount?: number;
+  paragraphCount?: number;
+  sentenceCount?: number;
   internalLinksCount?: number;
   externalLinksCount?: number;
   schemaType?: string; // e.g. Article, FAQ, custom
@@ -106,6 +114,13 @@ export interface BlogPost {
   status?: "published" | "draft" | "scheduled" | "trash";
   lastUpdated?: string;
   seoScore?: number;
+  revisions?: Array<{
+    id: string;
+    timestamp: string;
+    title: string;
+    content: string;
+    excerpt: string;
+  }>;
 }
 
 export interface WPVideo {

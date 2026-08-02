@@ -689,6 +689,31 @@ Object.entries(faviconMimes).forEach(([route, mimeType]) => {
   });
 });
 
+// Explicit PDF serving handlers for Paras and Qaida
+app.get("/paras/:file", (req, res) => {
+  const file = req.params.file;
+  const filePath = path.join(process.cwd(), "public", "paras", file);
+  if (fs.existsSync(filePath)) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${file}"`);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.sendFile(filePath);
+  }
+  return res.status(404).send("Para PDF not found");
+});
+
+app.get("/qaida/:file", (req, res) => {
+  const file = req.params.file;
+  const filePath = path.join(process.cwd(), "public", "qaida", file);
+  if (fs.existsSync(filePath)) {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", `inline; filename="${file}"`);
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    return res.sendFile(filePath);
+  }
+  return res.status(404).send("Qaida PDF not found");
+});
+
 // Robots.txt Endpoint
 app.get("/robots.txt", (req, res) => {
   const db = getDatabase();
@@ -701,6 +726,8 @@ Allow: /favicon-*.png
 Allow: /apple-touch-icon.png
 Allow: /logo.png
 Allow: /site-logo.png
+Allow: /paras/
+Allow: /qaida/
 Disallow: /wp-admin/
 Disallow: /api/
 
