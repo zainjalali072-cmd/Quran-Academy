@@ -56,7 +56,8 @@ export function parseCurrentRoute(): RouteState {
   }
 
   if (pathname.startsWith("/blog/")) {
-    const slug = pathname.replace("/blog/", "");
+    const rawSlug = pathname.replace("/blog/", "").replace(/\/$/, "");
+    const slug = decodeURIComponent(rawSlug);
     return { view: "blog-post", activePostId: slug, isWpAdmin: false };
   }
 

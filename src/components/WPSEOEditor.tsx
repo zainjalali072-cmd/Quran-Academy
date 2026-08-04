@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { BlogPost } from "../types";
+import { navigateToRoute } from "../utils/router";
 import { saveCMSData, CMSData, cleanHTMLToExcerpt, DEFAULT_POST_IMAGE } from "../cmsStore";
 import { 
   Check, 
@@ -1690,9 +1691,13 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
 
             <a
               href={`/blog/${currentPost.slug || currentPost.id}`}
-              target="_blank"
-              rel="noreferrer"
-              className="px-3 py-2 bg-[#07080b] hover:bg-[#12141b] text-[#d9b45c] border border-[#d9b45c]/30 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5"
+              onClick={(e) => {
+                if (!e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                  e.preventDefault();
+                  navigateToRoute("blog-post", currentPost.slug || currentPost.id);
+                }
+              }}
+              className="px-3 py-2 bg-[#07080b] hover:bg-[#12141b] text-[#d9b45c] border border-[#d9b45c]/30 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer"
             >
               <ExternalLink size={14} />
               <span>View Live Page</span>

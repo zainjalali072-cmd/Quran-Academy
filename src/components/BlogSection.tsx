@@ -132,12 +132,14 @@ export default function BlogSection({
 
   // Render Single Full Blog Post View
   if (currentView === "blog-post" && activePostId) {
-    const post = allPosts.find((p) => 
-      p.id === activePostId || 
-      p.slug === activePostId || 
-      (p.slug && activePostId && p.slug.toLowerCase() === activePostId.toLowerCase()) ||
-      (p.id && activePostId && p.id.toLowerCase() === activePostId.toLowerCase())
-    );
+    const normalize = (str?: string) => (str || "").trim().toLowerCase().replace(/\/$/, "");
+    const target = normalize(activePostId);
+    const post = allPosts.find((p) => {
+      const pid = normalize(p.id);
+      const pslug = normalize(p.slug);
+      const ptitleSlug = normalize(p.title).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      return pid === target || pslug === target || ptitleSlug === target;
+    });
     if (!post) {
       return (
         <div className="text-center py-20">

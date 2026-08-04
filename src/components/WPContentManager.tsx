@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from "react";
+import { navigateToRoute } from "../utils/router";
 import { 
   CMSData, 
   WPTeacher, 
@@ -1807,7 +1808,16 @@ export default function WPContentManager({ cmsData, onSave, activeTab, setActive
                                 </>
                               )}
                               <span>|</span>
-                              <a href="#preview" onClick={() => setActiveTab("dashboard")} className="text-blue-400 hover:underline">View</a>
+                              <a 
+                                href={`/blog/${item.slug || item.id}`} 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  navigateToRoute("blog-post", item.slug || item.id);
+                                }} 
+                                className="text-blue-400 hover:underline cursor-pointer"
+                              >
+                                View
+                              </a>
                             </>
                           )}
                         </div>
