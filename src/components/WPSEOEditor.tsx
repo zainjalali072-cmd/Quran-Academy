@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { BlogPost } from "../types";
-import { saveCMSData, CMSData } from "../cmsStore";
+import { saveCMSData, CMSData, cleanHTMLToExcerpt, DEFAULT_POST_IMAGE } from "../cmsStore";
 import { 
   Check, 
   AlertTriangle, 
@@ -637,8 +637,15 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     if (!currentPost) return;
 
     const newStatus = statusOverride || currentPost.status || "published";
+    const cleanExcerpt = cleanHTMLToExcerpt(currentPost.content || "", currentPost.excerpt);
+    const validImage = currentPost.coverImage || currentPost.featuredImage || currentPost.ogImage || DEFAULT_POST_IMAGE;
+
     const updatedPost: BlogPost = {
       ...currentPost,
+      excerpt: cleanExcerpt,
+      coverImage: validImage,
+      featuredImage: validImage,
+      ogImage: currentPost.ogImage || validImage,
       status: newStatus,
       lastUpdated: new Date().toISOString().split("T")[0],
       wordCount: contentStats.words,

@@ -442,7 +442,49 @@ export const DEFAULT_SEO_HEALTH = {
   brokenLinksCount: 2
 };
 
+export const DEFAULT_POST_IMAGE = tajweedMasteryBg;
+
+export const cleanHTMLToExcerpt = (content: string, existingExcerpt?: string): string => {
+  if (existingExcerpt && existingExcerpt.trim().length > 0) {
+    const strippedExisting = existingExcerpt
+      .replace(/<[^>]*>/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (strippedExisting.length > 0 && !strippedExisting.startsWith("<")) {
+      const words = strippedExisting.split(/\s+/).filter(Boolean);
+      if (words.length <= 40) return strippedExisting;
+      return words.slice(0, 35).join(" ") + "...";
+    }
+  }
+
+  if (!content) return "Read full article details on Truth Quran Academy...";
+
+  const cleaned = content
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<code[^>]*>[\s\S]*?<\/code>/gi, " ")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">")
+    .replace(/&quot;/gi, '"')
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return "Read full article details on Truth Quran Academy...";
+
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length <= 35) {
+    return cleaned;
+  }
+  return words.slice(0, 32).join(" ") + "...";
+};
+
 export const ensureBlogPostSEO = (post: BlogPost): BlogPost => {
+  const cleanExcerpt = cleanHTMLToExcerpt(post.content || "", post.excerpt);
+  const validImage = post.featuredImage || post.coverImage || post.ogImage || DEFAULT_POST_IMAGE;
+
   const stripped = (post.content || "").replace(/<[^>]*>/g, "");
   const words = stripped.trim() ? stripped.trim().split(/\s+/).filter(Boolean).length : 0;
   const sentences = stripped.split(/[.!?]+/).filter(s => s.trim().length > 2).length || 1;
@@ -450,28 +492,40 @@ export const ensureBlogPostSEO = (post: BlogPost): BlogPost => {
 
   return {
     ...post,
+    excerpt: cleanExcerpt,
+    coverImage: validImage,
+    featuredImage: validImage,
+    ogImage: post.ogImage || validImage,
     status: post.status || "published",
+    author: {
+      name: post.author?.name || "Muhammad Zain",
+      avatar: post.author?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+      role: post.author?.role || "Senior Quran Scholar"
+    },
+    date: post.date || post.publishDate || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+    readTime: post.readTime || "5 min read",
+    category: post.category || "Tajweed Rules",
+    tags: post.tags && post.tags.length > 0 ? post.tags : ["Tajweed"],
+    content: post.content || "<p>Article content details...</p>",
     seoTitle: post.seoTitle || `${post.title} | Truth Quran Academy`,
     metaTitle: post.metaTitle || post.title,
-    metaDescription: post.metaDescription || post.excerpt.substring(0, 150),
+    metaDescription: post.metaDescription || cleanExcerpt.substring(0, 150),
     focusKeyword: post.focusKeyword || (post.tags && post.tags[0]) || "Tajweed",
     slug: post.slug || post.id || "blog-article",
     canonicalUrl: post.canonicalUrl || `https://truthquranacademy.com/blog/${post.slug || post.id}/`,
     robotsMeta: post.robotsMeta || "index, follow, max-image-preview:large",
     ogTitle: post.ogTitle || post.title,
-    ogDescription: post.ogDescription || post.excerpt,
-    ogImage: post.ogImage || post.coverImage,
+    ogDescription: post.ogDescription || cleanExcerpt,
     twitterTitle: post.twitterTitle || post.ogTitle || post.title,
-    twitterDescription: post.twitterDescription || post.ogDescription || post.excerpt,
+    twitterDescription: post.twitterDescription || post.ogDescription || cleanExcerpt,
     twitterCard: post.twitterCard || "summary_large_image",
-    featuredImage: post.featuredImage || post.coverImage,
     imageAltText: post.imageAltText || `${post.title} cover banner`,
     imageTitle: post.imageTitle || `${post.title} featured photo`,
     imageCaption: post.imageCaption || `Illustration for ${post.title}`,
     imageDescription: post.imageDescription || `High quality featured photo for article ${post.title}`,
     imageFileName: post.imageFileName || `${(post.slug || "image").toLowerCase()}.jpg`,
-    publishDate: post.publishDate || post.date || "2026-07-18",
-    lastUpdated: post.lastUpdated || post.publishDate || post.date || "2026-07-20",
+    publishDate: post.publishDate || post.date || new Date().toISOString().split("T")[0],
+    lastUpdated: post.lastUpdated || post.publishDate || post.date || new Date().toISOString().split("T")[0],
     wordCount: post.wordCount || words || 450,
     sentenceCount: post.sentenceCount || sentences,
     paragraphCount: post.paragraphCount || paragraphs,
@@ -482,7 +536,7 @@ export const ensureBlogPostSEO = (post: BlogPost): BlogPost => {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "${post.title}",
-  "description": "${post.excerpt}",
+  "description": "${cleanExcerpt}",
   "author": {
     "@type": "Person",
     "name": "${post.author?.name || "Muhammad Zain"}"
