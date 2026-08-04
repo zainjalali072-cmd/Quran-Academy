@@ -48,7 +48,63 @@ const DEFAULT_FAQS = [
 ];
 
 const DEFAULT_BLOGS = [
-  { id: "blog-1", title: "Essential Tajweed Rules for Absolute Beginners", excerpt: "Phonetics is the spiritual soul of Quranic recitation. Explore the foundational articulation points of Makharij and learn to read beautifully.", date: "2026-07-18", author: { name: "Muhammad Zain" }, category: "Tajweed", tags: ["Beginners", "Tajweed Guide"] }
+  {
+    id: "hifz-tips-success",
+    title: "5 Proven Strategies to Accelerate Your Quran Memorization (Hifz)",
+    excerpt: "Embarking on the spiritual journey of memorizing the Holy Quran requires dedication, strategy, and consistency. Discover five traditional Jamia Naeemia Lahore techniques to double your retention rate.",
+    category: "Quran Memorization Tips",
+    coverImage: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&h=800&q=80",
+    featuredImage: "https://images.unsplash.com/photo-1585829365295-ab7cd400c167?auto=format&fit=crop&w=1200&h=800&q=80",
+    author: {
+      name: "Sheikh Abdul Rahman",
+      avatar: "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&q=80&w=300",
+      role: "Head of Quranic Studies"
+    },
+    date: "July 12, 2026",
+    readTime: "6 min read",
+    tags: ["Hifz", "Quran Memorization", "Spiritual Tips", "Brain Power"],
+    slug: "hifz-tips-success",
+    status: "published",
+    content: "<p>Embarking on the journey of Quranic memorization (Hifz) is one of the most noble spiritual pursuits a believer can undertake. However, many students face struggles with memory retention, distraction, and scheduling.</p><h3>1. Absolute Sincerity (Ikhlas)</h3><p>The foundation of any Quranic endeavor is purifying your intention. When memorizing, make your sole objective seeking the pleasure of Allah SWT.</p><h3>2. Consistent Time and Place</h3><p>Establishing a dedicated study space and a static time—ideally right after Fajr prayers when the mind is fully rested—dramatically improves learning speeds.</p>"
+  },
+  {
+    id: "tajweed-importance",
+    title: "Understanding the Essential Rules of Tajweed: Why Pronunciation Matters",
+    excerpt: "Tajweed is not merely an optional decorative science—it is an obligation to preserve the semantic integrity of Allah's Words. Learn the absolute essential rules every Muslim must master.",
+    category: "Tajweed Rules",
+    coverImage: "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&h=800&q=80",
+    featuredImage: "https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&h=800&q=80",
+    author: {
+      name: "Ustadh Hafiz Zain",
+      avatar: "https://images.unsplash.com/photo-1506880018603-83d5b814b5a6?auto=format&fit=crop&w=300",
+      role: "Lead Tajweed Instructor"
+    },
+    date: "June 28, 2026",
+    readTime: "5 min read",
+    tags: ["Tajweed", "Quran Rules", "Makharij", "Pronunciation"],
+    slug: "tajweed-importance",
+    status: "published",
+    content: "<p>When reciting the Holy Quran, every letter carries deep spiritual weight. Mispronouncing a single syllable can completely alter the theological meaning of a verse. This is why mastering the science of Tajweed is paramount.</p>"
+  },
+  {
+    id: "benefits-of-translation",
+    title: "The Transformative Power of Reading Quran with Tafseer & Understanding",
+    excerpt: "Reciting Arabic is highly rewarding, but translating the text unleashes its true transformative power. Read why understanding context elevates your Salah and personal ethics.",
+    category: "Islamic Studies",
+    coverImage: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&h=800&q=80",
+    featuredImage: "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&h=800&q=80",
+    author: {
+      name: "Dr. Ahmed Kamal",
+      avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+      role: "Senior Scholar"
+    },
+    date: "May 29, 2026",
+    readTime: "8 min read",
+    tags: ["Tafseer", "Arabic Translation", "Spiritual Transformation", "Quran Meaning"],
+    slug: "benefits-of-translation",
+    status: "published",
+    content: "<p>Many Muslims recite several pages of the Quran daily without understanding a single word. While every letter brings blessings, the core purpose of the Quran's revelation is intellectual reflection, spiritual transformation, and behavioral reform.</p>"
+  }
 ];
 
 const DEFAULT_TEACHERS = [

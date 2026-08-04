@@ -79,7 +79,7 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
   // 1. Post Selection State
   const posts = cmsData.blogPosts || [];
   const [selectedPostId, setSelectedPostId] = useState<string>(
-    externalPostId || (posts.length > 0 ? posts[0].id : "")
+    externalPostId || (posts.length > 0 ? posts[0].id : "new")
   );
 
   useEffect(() => {
@@ -92,19 +92,71 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
 
   // Current Post loaded
   const currentPostIndex = posts.findIndex((p) => p.id === selectedPostId || p.slug === selectedPostId);
-  const activePost = currentPostIndex !== -1 ? posts[currentPostIndex] : posts[0] || null;
+  const activePost = currentPostIndex !== -1 ? posts[currentPostIndex] : null;
 
   // Local Editable Post State
-  const [currentPost, setCurrentPost] = useState<BlogPost | null>(activePost);
+  const [currentPost, setCurrentPost] = useState<BlogPost | null>(() => {
+    if (activePost) return activePost;
+    const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+    return {
+      id: `post-${Date.now()}`,
+      title: "",
+      excerpt: "",
+      content: "<p>Start writing your article here...</p>",
+      category: "Tajweed Rules",
+      coverImage: "",
+      featuredImage: "",
+      author: {
+        name: "Muhammad Zain",
+        avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+        role: "Senior Quran Scholar"
+      },
+      date: today,
+      readTime: "5 min read",
+      tags: ["Tajweed Rules"],
+      status: "published",
+      slug: "new-article"
+    };
+  });
 
   useEffect(() => {
-    if (activePost) {
+    if (selectedPostId === "new" || externalPostId === "new") {
+      const today = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+      setCurrentPost({
+        id: `post-${Date.now()}`,
+        title: "",
+        excerpt: "",
+        content: "<p>Start writing your article here...</p>",
+        category: "Tajweed Rules",
+        coverImage: "",
+        featuredImage: "",
+        author: {
+          name: "Muhammad Zain",
+          avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+          role: "Senior Quran Scholar"
+        },
+        date: today,
+        readTime: "5 min read",
+        tags: ["Tajweed Rules"],
+        status: "published",
+        slug: "new-article"
+      });
+    } else if (activePost) {
       setCurrentPost({
         ...activePost,
         status: activePost.status || "published",
         title: activePost.title || "",
         content: activePost.content || "",
         excerpt: activePost.excerpt || "",
+        category: activePost.category || "Tajweed Rules",
+        date: activePost.date || new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }),
+        readTime: activePost.readTime || "5 min read",
+        author: {
+          name: activePost.author?.name || "Muhammad Zain",
+          avatar: activePost.author?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+          role: activePost.author?.role || "Senior Quran Scholar"
+        },
+        tags: activePost.tags || ["Tajweed Rules"],
         metaTitle: activePost.metaTitle || activePost.title || "",
         metaDescription: activePost.metaDescription || activePost.excerpt || "",
         focusKeyword: activePost.focusKeyword || "",
@@ -637,27 +689,44 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     if (!currentPost) return;
 
     const newStatus = statusOverride || currentPost.status || "published";
+    const postTitle = (currentPost.title || "").trim() || "Untitled Article";
+    const postSlug = (currentPost.slug || "").trim() || postTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const cleanExcerpt = cleanHTMLToExcerpt(currentPost.content || "", currentPost.excerpt);
     const validImage = currentPost.coverImage || currentPost.featuredImage || currentPost.ogImage || DEFAULT_POST_IMAGE;
+    const todayFormatted = new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
 
     const updatedPost: BlogPost = {
       ...currentPost,
+      title: postTitle,
+      slug: postSlug,
       excerpt: cleanExcerpt,
       coverImage: validImage,
       featuredImage: validImage,
       ogImage: currentPost.ogImage || validImage,
+      category: currentPost.category || "Tajweed Rules",
+      date: currentPost.date || todayFormatted,
+      readTime: currentPost.readTime || contentStats.readingTime || "5 min read",
+      author: {
+        name: currentPost.author?.name || "Muhammad Zain",
+        avatar: currentPost.author?.avatar || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&h=150&q=80",
+        role: currentPost.author?.role || "Senior Quran Scholar"
+      },
+      tags: currentPost.tags && currentPost.tags.length > 0 ? currentPost.tags : ["Tajweed Rules"],
       status: newStatus,
       lastUpdated: new Date().toISOString().split("T")[0],
       wordCount: contentStats.words,
       sentenceCount: contentStats.sentences,
       paragraphCount: contentStats.paragraphs,
-      readTime: contentStats.readingTime,
       seoScore: seoAnalysis.score
     };
 
     let updatedPosts = [...posts];
-    if (currentPostIndex !== -1) {
-      updatedPosts[currentPostIndex] = updatedPost;
+    const existingIndex = updatedPosts.findIndex((p) => p.id === currentPost.id || (p.slug && p.slug === postSlug));
+
+    if (existingIndex !== -1) {
+      // Remove old position and place updated post at index 0 so newest published article appears first!
+      updatedPosts.splice(existingIndex, 1);
+      updatedPosts.unshift(updatedPost);
     } else {
       updatedPosts.unshift(updatedPost);
     }
@@ -670,7 +739,8 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     saveCMSData(updatedCMSData);
     onSave(updatedCMSData);
     setCurrentPost(updatedPost);
-    showToast(`Article "${updatedPost.title}" saved successfully as ${newStatus.toUpperCase()}!`);
+    setSelectedPostId(updatedPost.id);
+    showToast(`Article "${updatedPost.title}" ${newStatus === "published" ? "published live" : "saved"} successfully!`);
   };
 
   // Create brand new draft article (Starts at 0% SEO Score until user writes content!)
@@ -1641,19 +1711,28 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
         {/* Post Selector, Dual Mode Switcher & Device Frame */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
           {/* Post Selection Dropdown */}
-          <div className="flex items-center space-x-2 flex-1 max-w-md">
+          <div className="flex items-center space-x-2 flex-1 max-w-lg">
             <span className="text-[10px] uppercase font-bold text-[#c9c2ab] whitespace-nowrap">Editing Article:</span>
             <select
               value={selectedPostId}
               onChange={(e) => setSelectedPostId(e.target.value)}
               className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-[#d9b45c]"
             >
+              <option value="new">✨ + Write New Article...</option>
               {posts.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.status === "published" ? "🟢" : "🟡"} {p.title}
+                  {p.status === "published" ? "🟢" : "🟡"} {p.title || "Untitled Article"}
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setSelectedPostId("new")}
+              className="px-3 py-2 bg-[#d9b45c] hover:bg-[#f2d98a] text-black font-extrabold text-xs rounded-xl flex items-center space-x-1 whitespace-nowrap transition-all shadow-md"
+              title="Create new article"
+            >
+              <Plus size={14} />
+              <span>New</span>
+            </button>
           </div>
 
           {/* DUAL EDITING MODE SWITCHER (Visual vs Code) */}
@@ -2645,6 +2724,117 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                 className="w-full bg-[#07080b] border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white resize-none"
                 placeholder="Meta description for search engine result snippet..."
               />
+            </div>
+          </div>
+
+          {/* 6. PUBLISHING METADATA & POST SETTINGS PANEL */}
+          <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-4 space-y-4 shadow-xl">
+            <h4 className="text-xs font-bold text-[#d9b45c] uppercase tracking-wider flex items-center space-x-1.5 border-b border-white/5 pb-2">
+              <Calendar size={14} />
+              <span>Publishing & Post Metadata</span>
+            </h4>
+
+            {/* Category Selection */}
+            <div className="space-y-1 text-xs">
+              <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Article Category</label>
+              <select
+                value={currentPost?.category || "Tajweed Rules"}
+                onChange={(e) => handleUpdateField("category", e.target.value)}
+                className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-[#d9b45c]"
+              >
+                <option value="Tajweed Rules">Tajweed Rules</option>
+                <option value="Quran Memorization Tips">Quran Memorization Tips</option>
+                <option value="Islamic Studies">Islamic Studies</option>
+                <option value="Parenting Guide">Parenting Guide</option>
+                <option value="Quranic Arabic">Quranic Arabic</option>
+                <option value="Academy Lectures">Academy Lectures</option>
+              </select>
+            </div>
+
+            {/* Publish Date */}
+            <div className="space-y-1 text-xs">
+              <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Publish Date</label>
+              <input
+                type="text"
+                value={currentPost?.date || ""}
+                onChange={(e) => handleUpdateField("date", e.target.value)}
+                className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                placeholder="e.g. August 4, 2026"
+              />
+            </div>
+
+            {/* Author Name */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Author Name</label>
+                <input
+                  type="text"
+                  value={currentPost?.author?.name || ""}
+                  onChange={(e) => handleUpdateField("author", { ...(currentPost?.author || {}), name: e.target.value })}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                  placeholder="Author name..."
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Author Role</label>
+                <input
+                  type="text"
+                  value={currentPost?.author?.role || ""}
+                  onChange={(e) => handleUpdateField("author", { ...(currentPost?.author || {}), role: e.target.value })}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                  placeholder="e.g. Lead Instructor"
+                />
+              </div>
+            </div>
+
+            {/* Reading Time */}
+            <div className="space-y-1 text-xs">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Reading Time</label>
+                <span className="text-[9px] font-mono text-[#d9b45c]">Auto: {contentStats.readingTime}</span>
+              </div>
+              <input
+                type="text"
+                value={currentPost?.readTime || contentStats.readingTime}
+                onChange={(e) => handleUpdateField("readTime", e.target.value)}
+                className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                placeholder="e.g. 5 min read"
+              />
+            </div>
+
+            {/* Article Tags */}
+            <div className="space-y-1 text-xs">
+              <label className="text-[10px] uppercase font-bold text-[#c9c2ab]">Tags (Comma Separated)</label>
+              <input
+                type="text"
+                value={currentPost?.tags ? currentPost.tags.join(", ") : ""}
+                onChange={(e) => {
+                  const arr = e.target.value.split(",").map(t => t.trim()).filter(Boolean);
+                  handleUpdateField("tags", arr);
+                }}
+                className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-xs text-white"
+                placeholder="Tajweed, Quran, Memorization..."
+              />
+            </div>
+
+            {/* Publishing Action Buttons */}
+            <div className="pt-2 flex items-center justify-between gap-2 border-t border-white/5">
+              <button
+                type="button"
+                onClick={() => handleSaveArticle("draft")}
+                className="flex-1 py-2.5 bg-[#07080b] hover:bg-white/5 text-[#c9c2ab] border border-white/10 rounded-xl font-bold text-xs transition-colors"
+              >
+                Save Draft
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSaveArticle("published")}
+                className="flex-1 py-2.5 bg-gradient-to-r from-[#f2d98a] to-[#d9b45c] text-black rounded-xl font-extrabold text-xs shadow-lg hover:brightness-110 transition-all"
+              >
+                Publish Live →
+              </button>
             </div>
           </div>
 
