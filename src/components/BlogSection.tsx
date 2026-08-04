@@ -194,7 +194,7 @@ export default function BlogSection({
               className="bg-[#12141b]/70 border border-[#d9b45c]/12 rounded-2xl overflow-hidden hover:border-[#d9b45c]/35 transition-all duration-300 flex flex-col h-full cursor-pointer group"
             >
               {/* Media Card Cover */}
-              <div className="h-48 bg-[#07080b] relative overflow-hidden">
+              <div className="w-full aspect-[3/2] bg-[#07080b] relative overflow-hidden">
                 <img
                   src={post.coverImage}
                   alt={post.title}

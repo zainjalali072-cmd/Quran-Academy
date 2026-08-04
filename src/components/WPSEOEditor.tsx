@@ -161,7 +161,74 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
   // Modals state
   const [showSlashMenu, setShowSlashMenu] = useState(false);
   const [slashSearch, setSlashSearch] = useState("");
-  
+  const [activeBlockCategory, setActiveBlockCategory] = useState<"all" | "text" | "media" | "layout" | "design" | "embed" | "seo">("all");
+
+  // Interactive Block Builder Modals
+  const [showTableModal, setShowTableModal] = useState(false);
+  const [tableRows, setTableRows] = useState(3);
+  const [tableCols, setTableCols] = useState(3);
+  const [tableHasHeader, setTableHasHeader] = useState(true);
+  const [tableStyle, setTableStyle] = useState<"gold" | "dark" | "emerald">("gold");
+
+  const [showButtonModal, setShowButtonModal] = useState(false);
+  const [buttonText, setButtonText] = useState("Start Free Trial");
+  const [buttonUrl, setButtonUrl] = useState("https://wa.me/+923219347471");
+  const [buttonStyle, setButtonStyle] = useState<"gold" | "outline" | "emerald" | "blue" | "dark">("gold");
+  const [buttonSize, setButtonSize] = useState<"sm" | "md" | "lg">("md");
+  const [buttonAlign, setButtonAlign] = useState<"left" | "center" | "right">("center");
+  const [buttonTargetBlank, setButtonTargetBlank] = useState(true);
+
+  const [showFaqModal, setShowFaqModal] = useState(false);
+  const [faqItems, setFaqItems] = useState([
+    { question: "Who are the instructors at Truth Quran Academy?", answer: "Our instructors are certified Huffadh and scholars from Jamia Naeemia Lahore with years of online teaching experience." },
+    { question: "What age groups do you teach?", answer: "We offer tailored programs for children (ages 4+), teenagers, adults, and beginners of all ages." }
+  ]);
+  const [faqIncludeSchema, setFaqIncludeSchema] = useState(true);
+
+  const [showEmbedModal, setShowEmbedModal] = useState(false);
+  const [embedType, setEmbedType] = useState<"youtube" | "vimeo" | "googlemaps" | "custom">("youtube");
+  const [embedUrl, setEmbedUrl] = useState("https://www.youtube.com/embed/dQw4w9WgXcQ");
+
+  const [showCtaModal, setShowCtaModal] = useState(false);
+  const [ctaTitle, setCtaTitle] = useState("Master Quran Recitation with Certified Scholars");
+  const [ctaDesc, setCtaDesc] = useState("Schedule a 100% free 30-minute evaluation session with expert teachers from Jamia Naeemia Lahore.");
+  const [ctaBtnText, setCtaBtnText] = useState("Book Free Trial on WhatsApp");
+  const [ctaBtnUrl, setCtaBtnUrl] = useState("https://wa.me/+923219347471");
+
+  // History stack for Undo / Redo
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  const pushHistory = (newContent: string) => {
+    setHistory((prev) => {
+      const sliced = prev.slice(0, historyIndex + 1);
+      return [...sliced, newContent];
+    });
+    setHistoryIndex((prev) => prev + 1);
+  };
+
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevContent = history[historyIndex - 1];
+      setHistoryIndex((prev) => prev - 1);
+      if (currentPost) {
+        setCurrentPost({ ...currentPost, content: prevContent });
+      }
+      showToast("Undo applied");
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextContent = history[historyIndex + 1];
+      setHistoryIndex((prev) => prev + 1);
+      if (currentPost) {
+        setCurrentPost({ ...currentPost, content: nextContent });
+      }
+      showToast("Redo applied");
+    }
+  };
+
   const [showInternalLinkModal, setShowInternalLinkModal] = useState(false);
   const [internalLinkSearch, setInternalLinkSearch] = useState("");
   const [internalLinkTab, setInternalLinkTab] = useState<"posts" | "pages" | "courses">("posts");
@@ -184,13 +251,124 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
   const [showMediaLibraryModal, setShowMediaLibraryModal] = useState(false);
   const [mediaTargetField, setMediaTargetField] = useState<"featured" | "internal">("featured");
 
-  // Crop / Image Tool Modal
+  // 3:2 Featured Image Cropper & Optimization Studio State
   const [showCropModal, setShowCropModal] = useState(false);
+  const [pendingCropImage, setPendingCropImage] = useState<string | null>(null);
+  const [cropScale, setCropScale] = useState(1.0);
+  const [cropPanX, setCropPanX] = useState(0);
+  const [cropPanY, setCropPanY] = useState(0);
   const [cropBrightness, setCropBrightness] = useState(100);
   const [cropContrast, setCropContrast] = useState(100);
+  const [cropSaturation, setCropSaturation] = useState(100);
+  const [cropAspectRatio, setCropAspectRatio] = useState<"3:2" | "16:9" | "1:1" | "4:3">("3:2");
+  const [cropQuality, setCropQuality] = useState(0.88);
+  const [imageNaturalDims, setImageNaturalDims] = useState<{ width: number; height: number } | null>(null);
+  const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
+  const [dragStartPos, setDragStartPos] = useState({ x: 0, y: 0 });
+
+  // Social Sharing & SERP preview tabs
+  const [previewTab, setPreviewTab] = useState<"google" | "facebook" | "twitter">("google");
 
   const featuredFileInputRef = useRef<HTMLInputElement>(null);
   const internalFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Measure natural dimensions of active cover image
+  useEffect(() => {
+    const activeCover = currentPost?.coverImage || currentPost?.featuredImage;
+    if (activeCover) {
+      const img = new Image();
+      img.src = activeCover;
+      img.onload = () => {
+        setImageNaturalDims({ width: img.naturalWidth, height: img.naturalHeight });
+      };
+    } else {
+      setImageNaturalDims(null);
+    }
+  }, [currentPost?.coverImage, currentPost?.featuredImage]);
+
+  // Quick auto-crop reset to 3:2 centered
+  const handleQuickAutoCrop3by2 = () => {
+    setCropScale(1.0);
+    setCropPanX(0);
+    setCropPanY(0);
+    setCropBrightness(100);
+    setCropContrast(100);
+    setCropSaturation(100);
+    setCropAspectRatio("3:2");
+    showToast("Reset to standard 3:2 (1200 × 800 px) centered crop.");
+  };
+
+  // High-performance canvas crop & Web optimization (1200 × 800 px export)
+  const handleApplyCropAndOptimize = () => {
+    const imgSrc = pendingCropImage || currentPost?.originalCoverImage || currentPost?.coverImage;
+    if (!imgSrc) return;
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.src = imgSrc;
+    img.onload = () => {
+      let targetWidth = 1200;
+      let targetHeight = 800;
+
+      if (cropAspectRatio === "16:9") {
+        targetWidth = 1200;
+        targetHeight = 675;
+      } else if (cropAspectRatio === "1:1") {
+        targetWidth = 800;
+        targetHeight = 800;
+      } else if (cropAspectRatio === "4:3") {
+        targetWidth = 1200;
+        targetHeight = 900;
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      const ctx = canvas.getContext("2d");
+
+      if (!ctx) return;
+
+      ctx.filter = `brightness(${cropBrightness}%) contrast(${cropContrast}%) saturate(${cropSaturation}%)`;
+
+      ctx.fillStyle = "#07080b";
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+      const imgRatio = img.naturalWidth / img.naturalHeight;
+      const targetRatio = targetWidth / targetHeight;
+
+      let drawWidth = targetWidth * cropScale;
+      let drawHeight = (targetWidth / imgRatio) * cropScale;
+
+      if (imgRatio < targetRatio) {
+        drawHeight = targetHeight * cropScale;
+        drawWidth = (targetHeight * imgRatio) * cropScale;
+      }
+
+      const offsetX = (targetWidth - drawWidth) / 2 + (cropPanX / 100) * targetWidth;
+      const offsetY = (targetHeight - drawHeight) / 2 + (cropPanY / 100) * targetHeight;
+
+      ctx.drawImage(img, offsetX, offsetY, drawWidth, drawHeight);
+
+      const optimizedDataUrl = canvas.toDataURL("image/jpeg", cropQuality);
+
+      handleUpdateField("coverImage", optimizedDataUrl);
+      handleUpdateField("featuredImage", optimizedDataUrl);
+      handleUpdateField("ogImage", optimizedDataUrl);
+      handleUpdateField("imageWidth", targetWidth);
+      handleUpdateField("imageHeight", targetHeight);
+      handleUpdateField("imageAspectRatio", cropAspectRatio);
+
+      if (pendingCropImage && pendingCropImage !== currentPost?.originalCoverImage) {
+        handleUpdateField("originalCoverImage", pendingCropImage);
+      } else if (!currentPost?.originalCoverImage) {
+        handleUpdateField("originalCoverImage", imgSrc);
+      }
+
+      setShowCropModal(false);
+      setPendingCropImage(null);
+      showToast(`Featured image optimized & saved at ${targetWidth} × ${targetHeight} px (3:2 Ratio)!`);
+    };
+  };
 
   // Field updater
   const handleUpdateField = (field: keyof BlogPost, value: any) => {
@@ -350,16 +528,24 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
       points: 10
     });
 
-    // Rule 9: Featured Image Set & Alt Text
+    // Rule 9: Featured Image Set, Alt Text & 3:2 Ratio Standard (1200x800)
     const imageSet = Boolean(currentPost.coverImage || currentPost.featuredImage);
     const altSet = (currentPost.imageAltText || "").trim().length > 3;
-    const imgPassed = imageSet && altSet;
+    const is3by2Standard = imageNaturalDims ? (imageNaturalDims.width >= 1000 && Math.abs((imageNaturalDims.width / imageNaturalDims.height) - 1.5) < 0.1) : true;
+    const imgPassed = imageSet && altSet && is3by2Standard;
+    
     rules.push({
       id: "featured_image",
-      label: "Featured Image & Alt Text",
+      label: "Featured Image (1200×800 px, 3:2 Ratio)",
       category: "Additional SEO",
       passed: imgPassed,
-      feedback: imgPassed ? "Featured image set with descriptive ALT text." : "Set a featured image and add ALT text.",
+      feedback: imgPassed 
+        ? "Featured image set with ALT text & verified 1200 × 800 px (3:2 Ratio) Rank Math standard." 
+        : !imageSet
+          ? "Set a featured image for search engines & social previews."
+          : !altSet
+            ? "Add descriptive ALT text to the featured image."
+            : "Featured image aspect ratio/size should be optimized to 1200 × 800 pixels (3:2 ratio).",
       points: 8
     });
 
@@ -555,9 +741,695 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     if (!currentPost) return;
     const updatedContent = `${currentPost.content || ""}\n${blockHtml}`;
     handleUpdateField("content", updatedContent);
+    pushHistory(updatedContent);
     setShowSlashMenu(false);
-    showToast("Block added to post content!");
+    showToast("Block inserted into post!");
   };
+
+  // Rich Text Formatting Helpers
+  const applyFormattingToSelection = (openTag: string, closeTag: string, defaultText = "formatted text") => {
+    if (!currentPost) return;
+    const textarea = document.getElementById("gutenberg-content-textarea") as HTMLTextAreaElement | null;
+    const content = currentPost.content || "";
+
+    if (textarea && textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined && textarea.selectionStart !== textarea.selectionEnd) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = content.substring(start, end);
+      const newContent = content.substring(0, start) + openTag + selectedText + closeTag + content.substring(end);
+      handleUpdateField("content", newContent);
+      pushHistory(newContent);
+      showToast(`Formatting applied to selection!`);
+    } else {
+      const newContent = content + `\n${openTag}${defaultText}${closeTag}`;
+      handleUpdateField("content", newContent);
+      pushHistory(newContent);
+      showToast(`Inserted formatted element!`);
+    }
+  };
+
+  const applyHeadingToSelection = (level: "h1" | "h2" | "h3" | "h4") => {
+    const defaultText = level === "h1" ? "Main Article Title" : level === "h2" ? "Section Subheading" : "Sub-point Heading";
+    applyFormattingToSelection(`<${level} class="font-serif text-xl font-bold text-white my-4">`, `</${level}>`, defaultText);
+  };
+
+  const applyColorToSelection = (colorHex: string, label: string) => {
+    applyFormattingToSelection(`<span style="color: ${colorHex}">`, `</span>`, `${label} Text`);
+  };
+
+  const clearFormattingSelection = () => {
+    if (!currentPost) return;
+    const textarea = document.getElementById("gutenberg-content-textarea") as HTMLTextAreaElement | null;
+    const content = currentPost.content || "";
+    if (textarea && textarea.selectionStart !== undefined && textarea.selectionEnd !== undefined && textarea.selectionStart !== textarea.selectionEnd) {
+      const selected = content.substring(textarea.selectionStart, textarea.selectionEnd);
+      const stripped = selected.replace(/<[^>]*>/g, "");
+      const newContent = content.substring(0, textarea.selectionStart) + stripped + content.substring(textarea.selectionEnd);
+      handleUpdateField("content", newContent);
+      pushHistory(newContent);
+      showToast("Formatting cleared from selected text!");
+    } else {
+      const stripped = content.replace(/<[^>]*>/g, "");
+      handleUpdateField("content", stripped);
+      pushHistory(stripped);
+      showToast("All HTML formatting cleared!");
+    }
+  };
+
+  // Interactive Block Builders
+  const handleInsertCustomTable = () => {
+    let headerHtml = "";
+    if (tableHasHeader) {
+      headerHtml = `<thead class="bg-[#d9b45c]/20 text-[#f2d98a] font-bold"><tr>`;
+      for (let c = 1; c <= tableCols; c++) {
+        headerHtml += `<th class="p-3 border-b border-[#d9b45c]/30">Header ${c}</th>`;
+      }
+      headerHtml += `</tr></thead>`;
+    }
+
+    let rowsHtml = "";
+    for (let r = 1; r <= tableRows; r++) {
+      rowsHtml += `<tr class="${r % 2 === 0 ? "bg-white/5" : ""}">`;
+      for (let c = 1; c <= tableCols; c++) {
+        rowsHtml += `<td class="p-3 border-b border-white/5 text-[#c9c2ab]">Data ${r}-${c}</td>`;
+      }
+      rowsHtml += `</tr>`;
+    }
+
+    const tableClass = tableStyle === "gold" ? "border-[#d9b45c]/30" : tableStyle === "emerald" ? "border-emerald-500/30" : "border-white/10";
+
+    const fullTable = `
+<div class="overflow-x-auto my-6">
+  <table class="w-full text-left text-xs border ${tableClass} rounded-2xl overflow-hidden bg-[#12141b]">
+    ${headerHtml}
+    <tbody class="divide-y divide-white/5">
+      ${rowsHtml}
+    </tbody>
+  </table>
+</div>`;
+
+    handleInsertBlockHtml(fullTable);
+    setShowTableModal(false);
+  };
+
+  const handleInsertCustomButton = () => {
+    const styleClass = 
+      buttonStyle === "gold" ? "bg-[#d9b45c] text-black hover:bg-[#f2d98a]" :
+      buttonStyle === "emerald" ? "bg-emerald-500 text-black hover:bg-emerald-400" :
+      buttonStyle === "blue" ? "bg-blue-500 text-white hover:bg-blue-400" :
+      buttonStyle === "outline" ? "border-2 border-[#d9b45c] text-[#f2d98a] hover:bg-[#d9b45c] hover:text-black" :
+      "bg-[#12141b] text-white border border-white/20 hover:bg-white/10";
+
+    const sizeClass = buttonSize === "sm" ? "px-4 py-2 text-xs" : buttonSize === "lg" ? "px-8 py-4 text-sm font-extrabold" : "px-6 py-3 text-xs font-bold";
+
+    const btnHtml = `
+<div class="my-6 text-${buttonAlign}">
+  <a href="${buttonUrl}" ${buttonTargetBlank ? 'target="_blank" rel="noopener noreferrer"' : ''} class="inline-flex items-center space-x-2 ${styleClass} ${sizeClass} rounded-full transition-all shadow-xl font-sans uppercase tracking-wider">
+    <span>${buttonText} →</span>
+  </a>
+</div>`;
+
+    handleInsertBlockHtml(btnHtml);
+    setShowButtonModal(false);
+  };
+
+  const handleInsertCustomFaq = () => {
+    let faqAccordionHtml = `<div class="space-y-3 my-8"><h3 class="text-lg font-serif font-bold text-white mb-4">Frequently Asked Questions</h3>`;
+    let faqSchemaObj: any = {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": []
+    };
+
+    faqItems.forEach((item) => {
+      faqAccordionHtml += `
+<details class="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-4 cursor-pointer group transition-all">
+  <summary class="font-bold text-xs text-[#f2d98a] flex items-center justify-between list-none">
+    <span>${item.question}</span>
+    <span class="text-[#d9b45c] text-xs group-open:rotate-180 transition-transform">▼</span>
+  </summary>
+  <p class="text-xs text-[#c9c2ab] mt-3 leading-relaxed border-t border-white/5 pt-3">${item.answer}</p>
+</details>`;
+
+      if (faqIncludeSchema) {
+        faqSchemaObj.mainEntity.push({
+          "@type": "Question",
+          "name": item.question,
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": item.answer
+          }
+        });
+      }
+    });
+
+    faqAccordionHtml += `</div>`;
+
+    if (faqIncludeSchema) {
+      faqAccordionHtml += `\n<script type="application/ld+json">\n${JSON.stringify(faqSchemaObj, null, 2)}\n</script>`;
+    }
+
+    handleInsertBlockHtml(faqAccordionHtml);
+    setShowFaqModal(false);
+  };
+
+  const handleInsertCustomEmbed = () => {
+    let embedContainer = "";
+    if (embedType === "youtube" || embedType === "vimeo") {
+      let srcUrl = embedUrl;
+      if (embedType === "youtube" && !embedUrl.includes("embed")) {
+        const match = embedUrl.match(/(?:v=|\/embed\/|\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+        if (match) srcUrl = `https://www.youtube.com/embed/${match[1]}`;
+      }
+      embedContainer = `
+<div class="relative w-full aspect-video rounded-2xl overflow-hidden my-6 border border-[#d9b45c]/30 shadow-2xl">
+  <iframe class="absolute inset-0 w-full h-full" src="${srcUrl}" title="Embedded Video" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+</div>`;
+    } else if (embedType === "googlemaps") {
+      embedContainer = `
+<div class="relative w-full h-80 rounded-2xl overflow-hidden my-6 border border-[#d9b45c]/30 shadow-2xl">
+  <iframe class="w-full h-full" src="${embedUrl}" title="Google Map Embed" loading="lazy"></iframe>
+</div>`;
+    } else {
+      embedContainer = `
+<div class="custom-embed-block my-6 p-4 bg-[#07080b] border border-white/10 rounded-2xl overflow-x-auto">
+  ${embedUrl}
+</div>`;
+    }
+
+    handleInsertBlockHtml(embedContainer);
+    setShowEmbedModal(false);
+  };
+
+  const handleInsertCustomCta = () => {
+    const ctaHtml = `
+<div class="my-8 p-6 md:p-8 bg-gradient-to-br from-[#12141b] via-[#1e2230] to-[#07080b] border-2 border-[#d9b45c]/40 rounded-3xl text-center space-y-4 shadow-2xl relative overflow-hidden">
+  <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#f2d98a] via-[#d9b45c] to-[#b38f3b]"></div>
+  <h3 class="font-serif text-xl md:text-2xl font-bold text-white max-w-xl mx-auto">${ctaTitle}</h3>
+  <p class="text-xs md:text-sm text-[#c9c2ab] max-w-lg mx-auto leading-relaxed">${ctaDesc}</p>
+  <div class="pt-2">
+    <a href="${ctaBtnUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center space-x-2 px-8 py-3.5 bg-[#d9b45c] text-black font-extrabold text-xs uppercase tracking-wider rounded-full hover:bg-[#f2d98a] transition-all shadow-xl hover:scale-105">
+      <span>${ctaBtnText} →</span>
+    </a>
+  </div>
+</div>`;
+
+    handleInsertBlockHtml(ctaHtml);
+    setShowCtaModal(false);
+  };
+
+  // 4. COMPLETE GUTENBERG BLOCK LIBRARY (Categorized)
+  const slashCommands = [
+    // TEXT BLOCKS
+    {
+      id: "paragraph",
+      title: "/paragraph",
+      label: "Paragraph Text",
+      category: "text" as const,
+      desc: "Standard body text block with clean typography",
+      icon: <FileText size={16} className="text-[#d9b45c]" />,
+      action: () => handleInsertBlockHtml(`<p class="my-4 text-xs md:text-sm text-[#c9c2ab] leading-relaxed">Write your paragraph content here. Continuous study under qualified scholars builds tajweed precision.</p>`)
+    },
+    {
+      id: "heading",
+      title: "/heading",
+      label: "Subheading (H1 - H6)",
+      category: "text" as const,
+      desc: "Section title for SEO structure",
+      icon: <Heading2 size={16} className="text-purple-400" />,
+      action: () => handleInsertBlockHtml(`<h2 class="font-serif text-xl md:text-2xl text-[#f3ecd8] font-bold mt-8 mb-4 border-b border-[#d9b45c]/20 pb-2">Key Principles of Tajweed Recitation</h2>`)
+    },
+    {
+      id: "quote",
+      title: "/quote",
+      label: "Quote / Verse Box",
+      category: "text" as const,
+      desc: "Highlighted quote with golden accent line",
+      icon: <Quote size={16} className="text-emerald-400" />,
+      action: () => handleInsertBlockHtml(`
+<blockquote class="border-l-4 border-[#d9b45c] bg-[#12141b] p-5 my-6 rounded-r-2xl shadow-lg">
+  <p class="font-serif text-lg text-[#f2d98a] italic leading-relaxed">"And recite the Qur'an with measured recitation."</p>
+  <cite class="text-xs text-[#c9c2ab] mt-2 block font-sans font-bold">— Surah Al-Muzzammil [73:4]</cite>
+</blockquote>`)
+    },
+    {
+      id: "pullquote",
+      title: "/pullquote",
+      label: "Pull Quote Callout",
+      category: "text" as const,
+      desc: "Large featured quote spanning article width",
+      icon: <Quote size={16} className="text-amber-300" />,
+      action: () => handleInsertBlockHtml(`
+<div class="my-8 text-center p-6 border-y-2 border-[#d9b45c]/40 bg-[#07080b]">
+  <p class="text-lg md:text-xl font-serif font-bold text-[#f2d98a]">"Knowledge is gained through patient, consistent study under certified scholars."</p>
+  <span class="text-xs text-[#c9c2ab] mt-2 block">— Jamia Naeemia Lahore Faculty</span>
+</div>`)
+    },
+    {
+      id: "list",
+      title: "/list",
+      label: "Bulleted / Numbered List",
+      category: "text" as const,
+      desc: "Formatted bullet points or numbered lists",
+      icon: <List size={16} className="text-yellow-400" />,
+      action: () => handleInsertBlockHtml(`
+<ul class="list-disc list-inside space-y-2 my-4 text-xs text-[#c9c2ab]">
+  <li>Mastering Makharij (letter articulation points)</li>
+  <li>Understanding Sifat (letter characteristics)</li>
+  <li>Applying Ghunnah and Madd elongation rules</li>
+</ul>`)
+    },
+    {
+      id: "code",
+      title: "/code",
+      label: "Code / Shortcode Box",
+      category: "text" as const,
+      desc: "Monospaced code snippet container",
+      icon: <FileCode size={16} className="text-emerald-400" />,
+      action: () => handleInsertBlockHtml(`
+<pre class="bg-[#07080b] border border-white/10 p-4 rounded-xl text-xs font-mono text-green-400 overflow-x-auto my-6"><code>[quran_audio surah="1" ayah="1-7" reciter="mishary"]</code></pre>`)
+    },
+    {
+      id: "preformatted",
+      title: "/preformatted",
+      label: "Preformatted Text",
+      category: "text" as const,
+      desc: "Text box preserving exact spacing and formatting",
+      icon: <FileText size={16} className="text-cyan-400" />,
+      action: () => handleInsertBlockHtml(`
+<pre class="bg-[#12141b] p-4 rounded-xl text-xs font-mono text-[#c9c2ab] my-4 border border-white/10 whitespace-pre-wrap">Preformatted text maintains exact spacing and line breaks.</pre>`)
+    },
+    {
+      id: "classic",
+      title: "/classic",
+      label: "Classic Editor Block",
+      category: "text" as const,
+      desc: "Traditional WordPress classic content container",
+      icon: <Edit3 size={16} className="text-orange-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="classic-editor-block p-4 my-6 bg-[#07080b] border border-[#d9b45c]/20 rounded-xl text-xs text-[#c9c2ab]">
+  <p>Classic Editor Content Block</p>
+</div>`)
+    },
+
+    // MEDIA BLOCKS
+    {
+      id: "image",
+      title: "/image",
+      label: "Image Block",
+      category: "media" as const,
+      desc: "Upload image with ALT text, caption & lazy loading",
+      icon: <ImageIcon size={16} className="text-[#d9b45c]" />,
+      action: () => setShowInternalImagesModal(true)
+    },
+    {
+      id: "gallery",
+      title: "/gallery",
+      label: "Image Gallery Grid",
+      category: "media" as const,
+      desc: "3-column responsive photo grid gallery",
+      icon: <Grid size={16} className="text-indigo-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
+  <img src="https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=600&q=80" alt="Quran Study 1" class="rounded-xl h-40 w-full object-cover border border-white/10" />
+  <img src="https://images.unsplash.com/photo-1584286595398-a59f21d313f5?auto=format&fit=crop&w=600&q=80" alt="Quran Study 2" class="rounded-xl h-40 w-full object-cover border border-white/10" />
+  <img src="https://images.unsplash.com/photo-1542816417-0983cbe82752?auto=format&fit=crop&w=600&q=80" alt="Quran Study 3" class="rounded-xl h-40 w-full object-cover border border-white/10" />
+</div>`)
+    },
+    {
+      id: "video",
+      title: "/video",
+      label: "Video Player",
+      category: "media" as const,
+      desc: "Embed video file player with controls",
+      icon: <Video size={16} className="text-red-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="my-6 rounded-2xl overflow-hidden border border-[#d9b45c]/30 shadow-2xl">
+  <video controls class="w-full aspect-video bg-black" poster="https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&q=80">
+    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+  </video>
+</div>`)
+    },
+    {
+      id: "audio",
+      title: "/audio",
+      label: "Audio Player",
+      category: "media" as const,
+      desc: "Quran recitation audio player widget",
+      icon: <Film size={16} className="text-pink-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="my-6 p-4 bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl flex items-center space-x-4">
+  <div class="w-10 h-10 rounded-full bg-[#d9b45c] text-black flex items-center justify-center font-bold">♪</div>
+  <div class="flex-1">
+    <h4 class="text-xs font-bold text-white">Surah Al-Fatiha Recitation</h4>
+    <audio controls class="w-full mt-2 h-8">
+      <source src="https://server8.mp3quran.net/afs/001.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+</div>`)
+    },
+    {
+      id: "file",
+      title: "/file",
+      label: "Download File Block",
+      category: "media" as const,
+      desc: "Attachment download box for PDF guides",
+      icon: <Download size={16} className="text-emerald-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="bg-[#12141b] border border-emerald-500/30 p-4 rounded-2xl my-6 flex items-center justify-between">
+  <div>
+    <h4 class="font-bold text-white text-xs">Download Tajweed Rules Chart PDF</h4>
+    <p class="text-[10px] text-[#c9c2ab]">Official Jamia Naeemia Lahore guide (2.8 MB)</p>
+  </div>
+  <a href="https://truthquranacademy.com/download" target="_blank" class="px-4 py-2 bg-emerald-500 text-black font-bold text-xs rounded-xl hover:bg-emerald-400 transition-all flex items-center space-x-1">
+    <Download size={14} />
+    <span>Download PDF</span>
+  </a>
+</div>`)
+    },
+    {
+      id: "media",
+      title: "/media",
+      label: "Media Library",
+      category: "media" as const,
+      desc: "Choose asset from WordPress Media Library",
+      icon: <ImageIcon size={16} className="text-[#d9b45c]" />,
+      action: () => {
+        setMediaTargetField("internal");
+        setShowMediaLibraryModal(true);
+      }
+    },
+    {
+      id: "mediatext",
+      title: "/media&text",
+      label: "Media & Text Layout",
+      category: "media" as const,
+      desc: "Side-by-side media and explanatory text",
+      icon: <Layout size={16} className="text-blue-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-center my-6 p-5 bg-[#12141b] rounded-2xl border border-white/10">
+  <div>
+    <img src="https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=600&q=80" alt="Media Text" class="rounded-xl w-full object-cover shadow-lg" />
+  </div>
+  <div class="space-y-2">
+    <h4 class="font-serif font-bold text-white text-base">Interactive Tajweed Training</h4>
+    <p class="text-xs text-[#c9c2ab] leading-relaxed">Our senior scholars provide live, 1-on-1 feedback in real time.</p>
+  </div>
+</div>`)
+    },
+
+    // LAYOUT BLOCKS
+    {
+      id: "columns",
+      title: "/columns",
+      label: "2-Column Layout",
+      category: "layout" as const,
+      desc: "Side-by-side content comparison columns",
+      icon: <Layout size={16} className="text-cyan-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 text-xs leading-relaxed">
+  <div class="bg-[#12141b] border border-white/10 p-5 rounded-2xl">
+    <h4 class="font-bold text-white text-sm mb-2">Theoretical Tajweed</h4>
+    <p class="text-[#c9c2ab]">Understanding rules, makharij points, and characteristics of Arabic letters.</p>
+  </div>
+  <div class="bg-[#12141b] border border-white/10 p-5 rounded-2xl">
+    <h4 class="font-bold text-white text-sm mb-2">Practical Recitation</h4>
+    <p class="text-[#c9c2ab]">Applying rules live with a qualified teacher who listens and corrects errors.</p>
+  </div>
+</div>`)
+    },
+    {
+      id: "group",
+      title: "/group",
+      label: "Group Container Box",
+      category: "layout" as const,
+      desc: "Container card for grouping related elements",
+      icon: <Layers size={16} className="text-purple-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="my-6 p-6 bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl shadow-xl space-y-3">
+  <h4 class="text-sm font-bold text-[#f2d98a]">Grouped Content Container</h4>
+  <p class="text-xs text-[#c9c2ab]">Organize related elements inside a single card container.</p>
+</div>`)
+    },
+    {
+      id: "row",
+      title: "/row",
+      label: "Flex Row",
+      category: "layout" as const,
+      desc: "Horizontal row flex layout container",
+      icon: <Layout size={16} className="text-[#f2d98a]" />,
+      action: () => handleInsertBlockHtml(`
+<div class="flex flex-wrap items-center gap-4 my-6 p-4 bg-[#07080b] rounded-xl border border-white/10">
+  <span class="px-3 py-1 bg-[#d9b45c]/20 text-[#f2d98a] rounded-lg text-xs font-bold">Tajweed Level 1</span>
+  <span class="px-3 py-1 bg-[#d9b45c]/20 text-[#f2d98a] rounded-lg text-xs font-bold">Tajweed Level 2</span>
+  <span class="px-3 py-1 bg-[#d9b45c]/20 text-[#f2d98a] rounded-lg text-xs font-bold">Ijazah Mastery</span>
+</div>`)
+    },
+    {
+      id: "stack",
+      title: "/stack",
+      label: "Vertical Stack",
+      category: "layout" as const,
+      desc: "Vertical stack container with tight spacing",
+      icon: <Layers size={16} className="text-emerald-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="flex flex-col space-y-3 my-6 p-4 bg-[#12141b] rounded-xl border border-white/10">
+  <div class="p-3 bg-[#07080b] rounded-lg text-xs text-white">Stack Element 1</div>
+  <div class="p-3 bg-[#07080b] rounded-lg text-xs text-white">Stack Element 2</div>
+</div>`)
+    },
+    {
+      id: "spacer",
+      title: "/spacer",
+      label: "Spacer Block",
+      category: "layout" as const,
+      desc: "Adjustable vertical whitespace spacer",
+      icon: <Minus size={16} className="text-gray-400" />,
+      action: () => handleInsertBlockHtml(`<div class="my-8 h-8 w-full border-t border-b border-dashed border-white/10 flex items-center justify-center text-[10px] text-[#c9c2ab]/40 font-mono">Vertical Spacer (32px)</div>`)
+    },
+    {
+      id: "separator",
+      title: "/separator",
+      label: "Divider / Separator",
+      category: "layout" as const,
+      desc: "Clean golden accent line separator",
+      icon: <Minus size={16} className="text-[#d9b45c]" />,
+      action: () => handleInsertBlockHtml(`<hr class="my-8 border-t border-[#d9b45c]/30" />`)
+    },
+
+    // DESIGN BLOCKS
+    {
+      id: "button",
+      title: "/button",
+      label: "Button Block (Interactive)",
+      category: "design" as const,
+      desc: "Customizable CTA button with color, size & link",
+      icon: <Sparkles size={16} className="text-amber-400" />,
+      action: () => setShowButtonModal(true)
+    },
+    {
+      id: "buttons",
+      title: "/buttons",
+      label: "Buttons Group",
+      category: "design" as const,
+      desc: "Group of multiple action buttons side-by-side",
+      icon: <Sparkles size={16} className="text-yellow-300" />,
+      action: () => handleInsertBlockHtml(`
+<div class="flex flex-wrap items-center justify-center gap-3 my-6">
+  <a href="https://wa.me/+923219347471" target="_blank" class="px-6 py-3 bg-[#d9b45c] text-black font-extrabold text-xs rounded-full hover:bg-[#f2d98a] transition-all shadow-xl">Start Free Trial →</a>
+  <a href="https://truthquranacademy.com/courses" class="px-6 py-3 bg-[#12141b] text-white border border-white/20 font-bold text-xs rounded-full hover:bg-white/10 transition-all">Explore Courses</a>
+</div>`)
+    },
+    {
+      id: "cover",
+      title: "/cover",
+      label: "Cover Image Banner",
+      category: "design" as const,
+      desc: "Full-width background image header with text overlay",
+      icon: <ImageIcon size={16} className="text-rose-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="relative my-8 h-64 rounded-3xl overflow-hidden flex items-center justify-center text-center p-6 border border-[#d9b45c]/40 shadow-2xl" style="background: linear-gradient(180deg, rgba(7,8,11,0.7), rgba(7,8,11,0.9)), url('https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&q=80') center/cover;">
+  <div class="max-w-xl space-y-3 z-10">
+    <h3 class="font-serif text-2xl font-bold text-white">Unlock Quranic Knowledge</h3>
+    <p class="text-xs text-[#c9c2ab]">Learn with certified scholars from Jamia Naeemia Lahore.</p>
+    <a href="https://wa.me/+923219347471" target="_blank" class="inline-block px-6 py-2.5 bg-[#d9b45c] text-black font-extrabold text-xs rounded-full shadow-lg hover:bg-[#f2d98a]">Book Free Evaluation</a>
+  </div>
+</div>`)
+    },
+    {
+      id: "table",
+      title: "/table",
+      label: "Data Table (Interactive Builder)",
+      category: "design" as const,
+      desc: "Interactive builder for responsive HTML data tables",
+      icon: <TableIcon size={16} className="text-blue-400" />,
+      action: () => setShowTableModal(true)
+    },
+    {
+      id: "accordion",
+      title: "/accordion",
+      label: "Collapsible Accordion / Details",
+      category: "design" as const,
+      desc: "Expandable content drawer using HTML <details>",
+      icon: <ChevronDown size={16} className="text-teal-400" />,
+      action: () => handleInsertBlockHtml(`
+<details class="my-4 p-4 bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl group cursor-pointer">
+  <summary class="font-bold text-xs text-white list-none flex items-center justify-between">
+    <span>Click to view detailed Tajweed rules breakdown</span>
+    <span class="text-[#d9b45c] text-sm group-open:rotate-180 transition-transform">▼</span>
+  </summary>
+  <p class="mt-3 text-xs text-[#c9c2ab] leading-relaxed border-t border-white/5 pt-3">Tajweed consists of rules governing articulation points (Makharij), characteristics (Sifat), elongation (Madd), and nasalization (Ghunnah).</p>
+</details>`)
+    },
+    {
+      id: "callout",
+      title: "/callout",
+      label: "Callout Tip Box",
+      category: "design" as const,
+      desc: "Highlighted card for tips, warnings, and notes",
+      icon: <MessageSquare size={16} className="text-emerald-400" />,
+      action: () => handleInsertBlockHtml(`
+<div class="bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl p-5 my-6 flex items-start space-x-4 shadow-xl">
+  <div class="w-8 h-8 rounded-xl bg-[#d9b45c]/10 text-[#f2d98a] flex items-center justify-center flex-shrink-0 font-bold">💡</div>
+  <div class="text-xs text-[#c9c2ab] leading-relaxed">
+    <strong class="text-white block font-sans text-sm mb-1">Scholar's Recommendation:</strong>
+    Always practice Quran recitation aloud under the direct supervision of a certified Quran instructor to fix silent pronunciation errors.
+  </div>
+</div>`)
+    },
+
+    // EMBED BLOCKS
+    {
+      id: "youtube",
+      title: "/youtube",
+      label: "YouTube Video Embed",
+      category: "embed" as const,
+      desc: "Responsive YouTube player container",
+      icon: <Film size={16} className="text-red-500" />,
+      action: () => {
+        setEmbedType("youtube");
+        setShowEmbedModal(true);
+      }
+    },
+    {
+      id: "vimeo",
+      title: "/vimeo",
+      label: "Vimeo Video Embed",
+      category: "embed" as const,
+      desc: "Embed Vimeo video player container",
+      icon: <Film size={16} className="text-blue-400" />,
+      action: () => {
+        setEmbedType("vimeo");
+        setShowEmbedModal(true);
+      }
+    },
+    {
+      id: "googlemaps",
+      title: "/googlemaps",
+      label: "Google Maps Embed",
+      category: "embed" as const,
+      desc: "Interactive map embed container",
+      icon: <Globe size={16} className="text-green-400" />,
+      action: () => {
+        setEmbedType("googlemaps");
+        setShowEmbedModal(true);
+      }
+    },
+    {
+      id: "html",
+      title: "/html",
+      label: "Custom HTML Container",
+      category: "embed" as const,
+      desc: "Raw HTML or iframe script container",
+      icon: <Code size={16} className="text-orange-400" />,
+      action: () => handleInsertBlockHtml(`<div class="raw-html-block my-4 p-4 border border-white/10 rounded-xl bg-[#07080b] text-xs font-mono text-green-400"><!-- Custom HTML Code Here --></div>`)
+    },
+    {
+      id: "embed",
+      title: "/embed",
+      label: "Custom Embed Block",
+      category: "embed" as const,
+      desc: "Generic embed block for third-party widgets",
+      icon: <ExternalLink size={16} className="text-purple-400" />,
+      action: () => {
+        setEmbedType("custom");
+        setShowEmbedModal(true);
+      }
+    },
+
+    // SEO & CONVERSION BLOCKS
+    {
+      id: "faq",
+      title: "/faq",
+      label: "FAQ Accordion (Schema Ready)",
+      category: "seo" as const,
+      desc: "Interactive FAQ accordion with schema JSON-LD",
+      icon: <FaqIcon size={16} className="text-pink-400" />,
+      action: () => setShowFaqModal(true)
+    },
+    {
+      id: "toc",
+      title: "/tableofcontents",
+      label: "Table of Contents Box",
+      category: "seo" as const,
+      desc: "Article jump links list for longform posts",
+      icon: <ListOrdered size={16} className="text-[#d9b45c]" />,
+      action: () => handleInsertBlockHtml(`
+<div class="my-6 p-5 bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl shadow-xl space-y-3">
+  <h4 class="font-serif font-bold text-[#f2d98a] text-sm flex items-center space-x-2"><span>📑 Table of Contents</span></h4>
+  <ol class="list-decimal list-inside space-y-1.5 text-xs text-[#d9b45c]">
+    <li><a href="#section-1" class="hover:underline">1. Introduction to Tajweed Rules</a></li>
+    <li><a href="#section-2" class="hover:underline">2. Articulation Points (Makharij)</a></li>
+    <li><a href="#section-3" class="hover:underline">3. Common Recitation Mistakes</a></li>
+    <li><a href="#section-4" class="hover:underline">4. FAQ & Online Classes</a></li>
+  </ol>
+</div>`)
+    },
+    {
+      id: "cta",
+      title: "/calltoaction",
+      label: "Call to Action Banner (Interactive)",
+      category: "seo" as const,
+      desc: "High-converting lead acquisition banner",
+      icon: <Sparkles size={16} className="text-amber-400" />,
+      action: () => setShowCtaModal(true)
+    },
+    {
+      id: "internal_link",
+      title: "/internal link",
+      label: "Internal Link Search",
+      category: "seo" as const,
+      desc: "Search & link to existing pages/courses/posts",
+      icon: <Link2 size={16} className="text-[#d9b45c]" />,
+      action: () => setShowInternalLinkModal(true)
+    },
+    {
+      id: "external_link",
+      title: "/external link",
+      label: "External Reference Link",
+      category: "seo" as const,
+      desc: "Link to authoritative external source",
+      icon: <ExternalLink size={16} className="text-blue-400" />,
+      action: () => setShowExternalLinkModal(true)
+    },
+    {
+      id: "shortcode",
+      title: "/shortcode",
+      label: "WordPress Shortcode",
+      category: "seo" as const,
+      desc: "Insert shortcodes like [quran_audio_player]",
+      icon: <Code2 size={16} className="text-[#d9b45c]" />,
+      action: () => handleInsertBlockHtml(`<div class="my-4 text-xs font-mono text-[#f2d98a] bg-[#07080b] p-3 rounded-xl border border-[#d9b45c]/30">[quran_audio_player]</div>`)
+    }
+  ];
+
+  const filteredSlashCommands = slashCommands.filter(
+    (c) =>
+      (activeBlockCategory === "all" || c.category === activeBlockCategory) &&
+      (c.title.toLowerCase().includes(slashSearch.toLowerCase()) ||
+        c.label.toLowerCase().includes(slashSearch.toLowerCase()) ||
+        c.desc.toLowerCase().includes(slashSearch.toLowerCase()))
+  );
 
   // File Upload Helpers for Featured & Internal Images
   const handleFileUpload = (file: File, target: "featured" | "internal") => {
@@ -566,13 +1438,22 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
     reader.onload = (e) => {
       const dataUrl = e.target?.result as string;
       if (target === "featured") {
-        handleUpdateField("coverImage", dataUrl);
-        handleUpdateField("featuredImage", dataUrl);
-        handleUpdateField("ogImage", dataUrl);
-        if (!currentPost?.imageFileName) {
-          handleUpdateField("imageFileName", file.name);
-        }
-        showToast("Featured image uploaded successfully!");
+        setPendingCropImage(dataUrl);
+        handleUpdateField("originalCoverImage", dataUrl);
+        handleUpdateField("imageFileName", file.name);
+        
+        // Reset crop studio options to default 3:2
+        setCropScale(1.0);
+        setCropPanX(0);
+        setCropPanY(0);
+        setCropBrightness(100);
+        setCropContrast(100);
+        setCropSaturation(100);
+        setCropAspectRatio("3:2");
+
+        // Open live 3:2 Cropper & Optimization Studio
+        setShowCropModal(true);
+        showToast("File uploaded! Verify dimensions & crop to 1200 × 800 px (3:2 Aspect Ratio).");
       } else {
         // Insert internal image block
         const imgHtml = `
@@ -610,271 +1491,6 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
       handleFileUpload(e.dataTransfer.files[0], "internal");
     }
   };
-
-  // 4. COMPLETE SLASH (/) COMMAND MENU ITEMS (All 22 Gutenberg & Rank Math commands)
-  const slashCommands = [
-    {
-      id: "image",
-      title: "/image",
-      label: "Insert Image Block",
-      desc: "Upload or choose an image with ALT text, caption & lazy loading",
-      icon: <ImageIcon size={16} className="text-[#d9b45c]" />,
-      action: () => setShowInternalImagesModal(true)
-    },
-    {
-      id: "table",
-      title: "/table",
-      label: "Insert Data Table",
-      desc: "Responsive HTML table for comparisons & schedules",
-      icon: <TableIcon size={16} className="text-blue-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="overflow-x-auto my-6">
-  <table class="w-full text-left text-xs border border-[#d9b45c]/20 rounded-xl overflow-hidden">
-    <thead class="bg-[#d9b45c]/10 text-[#f2d98a] font-bold">
-      <tr>
-        <th class="p-3 border-b border-[#d9b45c]/20">Tajweed Rule</th>
-        <th class="p-3 border-b border-[#d9b45c]/20">Arabic Letter</th>
-        <th class="p-3 border-b border-[#d9b45c]/20">Pronunciation Guide</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-white/5 text-[#c9c2ab]">
-      <tr>
-        <td class="p-3 font-semibold text-white">Izhar (Clearness)</td>
-        <td class="p-3 font-serif text-lg text-[#d9b45c]">ء هـ ع ح غ خ</td>
-        <td class="p-3">Pronounce Noon Sakinah clearly without Ghunnah</td>
-      </tr>
-      <tr>
-        <td class="p-3 font-semibold text-white">Idgham (Merging)</td>
-        <td class="p-3 font-serif text-lg text-[#d9b45c]">ي ر م ل و ن</td>
-        <td class="p-3">Merge Noon Sakinah into the next letter</td>
-      </tr>
-    </tbody>
-  </table>
-</div>`)
-    },
-    {
-      id: "heading",
-      title: "/heading",
-      label: "Insert Subheading (H2 / H3 / H4)",
-      desc: "Structured subheadings for SEO hierarchy",
-      icon: <Heading2 size={16} className="text-purple-400" />,
-      action: () => handleInsertBlockHtml(`<h2 class="font-serif text-xl md:text-2xl text-[#f3ecd8] font-bold mt-8 mb-4 border-b border-[#d9b45c]/20 pb-2">Key Principles of Tajweed Recitation</h2>`)
-    },
-    {
-      id: "quote",
-      title: "/quote",
-      label: "Quranic Verse / Quote Box",
-      desc: "Highlighted quote with Arabic verse styling",
-      icon: <Quote size={16} className="text-emerald-400" />,
-      action: () => handleInsertBlockHtml(`
-<blockquote class="border-l-4 border-[#d9b45c] bg-[#12141b] p-5 my-6 rounded-r-2xl shadow-lg">
-  <p class="font-serif text-lg text-[#f2d98a] italic leading-relaxed">"And recite the Qur'an with measured recitation."</p>
-  <cite class="text-xs text-[#c9c2ab] mt-2 block font-sans font-bold">— Surah Al-Muzzammil [73:4]</cite>
-</blockquote>`)
-    },
-    {
-      id: "button",
-      title: "/button",
-      label: "Call to Action Button",
-      desc: "Clickable button directing to courses or trial registration",
-      icon: <Sparkles size={16} className="text-amber-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="my-6 text-center">
-  <a href="https://truthquranacademy.com/courses" class="inline-flex items-center space-x-2 bg-[#d9b45c] text-black font-extrabold text-xs uppercase tracking-wider px-6 py-3.5 rounded-full hover:bg-[#f2d98a] transition-all shadow-xl">
-    <span>Enroll in Live Quran Classes →</span>
-  </a>
-</div>`)
-    },
-    {
-      id: "callout",
-      title: "/callout",
-      label: "Highlight Callout Box",
-      desc: "Important tip, warning, or key takeaways box",
-      icon: <MessageSquare size={16} className="text-teal-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="bg-[#12141b] border border-[#d9b45c]/30 rounded-2xl p-5 my-6 flex items-start space-x-4 shadow-xl">
-  <div class="w-8 h-8 rounded-xl bg-[#d9b45c]/10 text-[#f2d98a] flex items-center justify-center flex-shrink-0 font-bold">💡</div>
-  <div class="text-xs text-[#c9c2ab] leading-relaxed">
-    <strong class="text-white block font-sans text-sm mb-1">Important Tajweed Note:</strong>
-    Always listen to a qualified Qari to master the exact makhraj (articulation point) of heavy letters like Ḍād (ض) and Ṭā (ط).
-  </div>
-</div>`)
-    },
-    {
-      id: "faq",
-      title: "/faq",
-      label: "FAQ Accordion Block",
-      desc: "Schema-ready FAQ questions & answers",
-      icon: <FaqIcon size={16} className="text-pink-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="space-y-4 my-8">
-  <h3 class="text-lg font-serif font-bold text-white mb-4">Frequently Asked Questions</h3>
-  <details class="bg-[#12141b] border border-white/10 rounded-xl p-4 cursor-pointer">
-    <summary class="font-bold text-xs text-[#f2d98a]">What is the ideal age for a child to start Noorani Qaida?</summary>
-    <p class="text-xs text-[#c9c2ab] mt-2 leading-relaxed">Children as young as 4 to 5 years old can start learning Arabic letters through interactive visual lessons.</p>
-  </details>
-  <details class="bg-[#12141b] border border-white/10 rounded-xl p-4 cursor-pointer">
-    <summary class="font-bold text-xs text-[#f2d98a]">Are female Quran teachers available for kids and sisters?</summary>
-    <p class="text-xs text-[#c9c2ab] mt-2 leading-relaxed">Yes, Truth Quran Academy provides certified 1-on-1 female Quran teachers upon request.</p>
-  </details>
-</div>`)
-    },
-    {
-      id: "video",
-      title: "/video",
-      label: "HTML5 Video Player",
-      desc: "Embed an MP4 video file directly into the article",
-      icon: <Video size={16} className="text-red-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="my-6 rounded-2xl overflow-hidden border border-[#d9b45c]/30 shadow-2xl">
-  <video controls class="w-full aspect-video bg-black" poster="https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=1200&q=80">
-    <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
-    Your browser does not support video play.
-  </video>
-</div>`)
-    },
-    {
-      id: "gallery",
-      title: "/gallery",
-      label: "Image Gallery Grid",
-      desc: "3-column responsive photo grid",
-      icon: <Grid size={16} className="text-indigo-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="grid grid-cols-1 sm:grid-cols-3 gap-4 my-6">
-  <img src="https://images.unsplash.com/photo-1609599006353-e629aaabfeae?auto=format&fit=crop&w=600&q=80" alt="Quran Study 1" class="rounded-xl h-40 w-full object-cover border border-white/10" />
-  <img src="https://images.unsplash.com/photo-1584286595398-a59f21d313f5?auto=format&fit=crop&w=600&q=80" alt="Quran Study 2" class="rounded-xl h-40 w-full object-cover border border-white/10" />
-  <img src="https://images.unsplash.com/photo-1542816417-0983cbe82752?auto=format&fit=crop&w=600&q=80" alt="Quran Study 3" class="rounded-xl h-40 w-full object-cover border border-white/10" />
-</div>`)
-    },
-    {
-      id: "youtube",
-      title: "/youtube",
-      label: "YouTube Embed Block",
-      desc: "Responsive YouTube video player container",
-      icon: <Film size={16} className="text-red-500" />,
-      action: () => handleInsertBlockHtml(`
-<div class="relative w-full aspect-video rounded-2xl overflow-hidden my-6 border border-[#d9b45c]/20 shadow-2xl">
-  <iframe class="absolute inset-0 w-full h-full" src="https://www.youtube.com/embed/dQw4w9WgXcQ" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>`)
-    },
-    {
-      id: "code",
-      title: "/code",
-      label: "Code Snippet Box",
-      desc: "Formatted dark box for shortcodes or code examples",
-      icon: <FileCode size={16} className="text-[#d9b45c]" />,
-      action: () => handleInsertBlockHtml(`
-<pre class="bg-[#07080b] border border-white/10 p-4 rounded-xl text-xs font-mono text-green-400 overflow-x-auto my-6"><code>/* Tajweed Audio Shortcode */
-[quran_audio surah="1" ayah="1-7" reciter="mishary"]</code></pre>`)
-    },
-    {
-      id: "columns",
-      title: "/columns",
-      label: "2-Column Layout",
-      desc: "Side-by-side content columns for comparison",
-      icon: <Layout size={16} className="text-cyan-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 my-6 text-xs leading-relaxed">
-  <div class="bg-[#12141b] border border-white/10 p-5 rounded-2xl">
-    <h4 class="font-bold text-white text-sm mb-2">Theoretical Tajweed</h4>
-    <p class="text-[#c9c2ab]">Understanding rules, makharij points, and characteristics of Arabic letters.</p>
-  </div>
-  <div class="bg-[#12141b] border border-white/10 p-5 rounded-2xl">
-    <h4 class="font-bold text-white text-sm mb-2">Practical Recitation</h4>
-    <p class="text-[#c9c2ab]">Applying rules live with a qualified teacher who listens and corrects errors.</p>
-  </div>
-</div>`)
-    },
-    {
-      id: "download",
-      title: "/download",
-      label: "Download File Button",
-      desc: "Download button for PDF guides & Qaida books",
-      icon: <Download size={16} className="text-green-400" />,
-      action: () => handleInsertBlockHtml(`
-<div class="bg-[#12141b] border border-emerald-500/20 p-4 rounded-2xl my-6 flex items-center justify-between">
-  <div>
-    <h4 class="font-bold text-white text-xs">Download Free Tajweed Rules PDF Guide</h4>
-    <p class="text-[10px] text-[#c9c2ab]">Includes complete color-coded rules chart (3.4 MB)</p>
-  </div>
-  <a href="https://truthquranacademy.com/download" target="_blank" class="px-4 py-2 bg-emerald-500 text-black font-bold text-xs rounded-xl hover:bg-emerald-400 transition-all flex items-center space-x-1">
-    <Download size={14} />
-    <span>Download PDF</span>
-  </a>
-</div>`)
-    },
-    {
-      id: "divider",
-      title: "/divider",
-      label: "Horizontal Divider",
-      desc: "Clean golden accent line separator",
-      icon: <Minus size={16} className="text-gray-400" />,
-      action: () => handleInsertBlockHtml(`<hr class="my-8 border-t border-[#d9b45c]/20" />`)
-    },
-    {
-      id: "list",
-      title: "/list",
-      label: "Bulleted List",
-      desc: "Clean bullet point list container",
-      icon: <List size={16} className="text-yellow-400" />,
-      action: () => handleInsertBlockHtml(`
-<ul class="list-disc list-inside space-y-2 my-4 text-xs text-[#c9c2ab]">
-  <li>Mastering Noon Sakinah & Tanween rules</li>
-  <li>Understanding Meem Sakinah rules</li>
-  <li>Madd (Elongation) classifications</li>
-</ul>`)
-    },
-    {
-      id: "shortcode",
-      title: "/shortcode",
-      label: "Shortcode Block",
-      desc: "Insert WordPress shortcodes like [quran_audio]",
-      icon: <Code2 size={16} className="text-[#d9b45c]" />,
-      action: () => handleInsertBlockHtml(`<div class="my-4 text-xs font-mono text-[#f2d98a] bg-[#07080b] p-3 rounded-xl border border-[#d9b45c]/30">[quran_audio_player]</div>`)
-    },
-    {
-      id: "internal_link",
-      title: "/internal link",
-      label: "Search & Insert Internal Link",
-      desc: "Search pages, courses, or posts to insert a link",
-      icon: <Link2 size={16} className="text-[#d9b45c]" />,
-      action: () => setShowInternalLinkModal(true)
-    },
-    {
-      id: "external_link",
-      title: "/external link",
-      label: "Insert External Reference Link",
-      desc: "Insert a link pointing to an external authoritative source",
-      icon: <ExternalLink size={16} className="text-blue-400" />,
-      action: () => setShowExternalLinkModal(true)
-    },
-    {
-      id: "html",
-      title: "/html",
-      label: "Custom HTML Container",
-      desc: "Insert raw HTML or embed script tags",
-      icon: <Code size={16} className="text-orange-400" />,
-      action: () => handleInsertBlockHtml(`<div class="raw-html-block my-4 p-4 border border-white/10 rounded-xl bg-[#07080b] text-xs font-mono text-green-400"><!-- Custom HTML Code Here --></div>`)
-    },
-    {
-      id: "media",
-      title: "/media",
-      label: "Open Media Library",
-      desc: "Select an existing media asset from library",
-      icon: <ImageIcon size={16} className="text-[#d9b45c]" />,
-      action: () => {
-        setMediaTargetField("internal");
-        setShowMediaLibraryModal(true);
-      }
-    }
-  ];
-
-  const filteredSlashCommands = slashCommands.filter(
-    (c) =>
-      c.title.toLowerCase().includes(slashSearch.toLowerCase()) ||
-      c.label.toLowerCase().includes(slashSearch.toLowerCase()) ||
-      c.desc.toLowerCase().includes(slashSearch.toLowerCase())
-  );
 
   // Internal Link Select Handler
   const handleInsertInternalLink = (url: string, linkText: string) => {
@@ -1200,102 +1816,268 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                 />
               </div>
 
-              {/* GUTENBERG & RANK MATH SLASH COMMAND TOOLBAR */}
-              <div className="bg-[#07080b] border border-[#d9b45c]/20 p-2.5 rounded-xl space-y-2">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-1.5 text-xs">
-                    {/* Slash Menu Trigger Button */}
+              {/* GUTENBERG & RANK MATH RICH FORMATTING & BLOCK INSERTER TOOLBAR */}
+              <div className="bg-[#07080b] border border-[#d9b45c]/30 p-3 rounded-2xl space-y-2 shadow-xl">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2">
+                  <div className="flex flex-wrap items-center gap-1 text-xs">
+                    {/* Gutenberg Inserter (+) Button */}
                     <button
                       type="button"
-                      onClick={() => setShowSlashMenu(!showSlashMenu)}
-                      className="px-3 py-1.5 bg-[#d9b45c] text-black rounded-lg font-bold flex items-center space-x-1.5 hover:bg-[#f2d98a] transition-all shadow-md"
+                      onClick={() => {
+                        setShowSlashMenu(true);
+                        setSlashSearch("");
+                      }}
+                      className="px-3 py-1.5 bg-[#d9b45c] text-black rounded-lg font-extrabold flex items-center space-x-1.5 hover:bg-[#f2d98a] transition-all shadow-md active:scale-95"
                     >
-                      <Plus size={14} />
-                      <span>/ Add Block</span>
+                      <Plus size={16} />
+                      <span>Add Block</span>
                     </button>
 
-                    {/* Internal Images Manager Button */}
+                    {/* Undo / Redo Buttons */}
+                    <div className="flex items-center space-x-1 border-r border-white/10 pr-2 mr-1">
+                      <button
+                        type="button"
+                        onClick={handleUndo}
+                        disabled={historyIndex <= 0}
+                        className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white disabled:opacity-30 rounded border border-white/10"
+                        title="Undo (Ctrl+Z)"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleRedo}
+                        disabled={historyIndex >= history.length - 1}
+                        className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white disabled:opacity-30 rounded border border-white/10"
+                        title="Redo (Ctrl+Y)"
+                      >
+                        <RefreshCw size={14} />
+                      </button>
+                    </div>
+
+                    {/* Headings */}
+                    <button
+                      type="button"
+                      onClick={() => applyHeadingToSelection("h2")}
+                      className="px-2 py-1 bg-[#12141b] text-[#f2d98a] font-serif font-bold hover:bg-[#d9b45c]/20 rounded border border-white/10 text-xs"
+                      title="Insert H2 Subheading"
+                    >
+                      H2
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyHeadingToSelection("h3")}
+                      className="px-2 py-1 bg-[#12141b] text-[#f2d98a] font-serif font-bold hover:bg-[#d9b45c]/20 rounded border border-white/10 text-xs"
+                      title="Insert H3 Subheading"
+                    >
+                      H3
+                    </button>
+
+                    {/* Inline Styles */}
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection("<b>", "</b>", "bold text")}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10 font-bold"
+                      title="Bold text"
+                    >
+                      <Bold size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection("<i>", "</i>", "italic text")}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10 italic"
+                      title="Italic text"
+                    >
+                      <Italic size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection("<u>", "</u>", "underlined text")}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10 underline"
+                      title="Underline text"
+                    >
+                      <Underline size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection("<s>", "</s>", "strikethrough text")}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10 line-through"
+                      title="Strikethrough text"
+                    >
+                      <Strikethrough size={14} />
+                    </button>
+
+                    {/* Alignment */}
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection('<p class="text-left">', '</p>', 'left-aligned text')}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10"
+                      title="Align Left"
+                    >
+                      <AlignLeft size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection('<p class="text-center">', '</p>', 'centered text')}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10"
+                      title="Align Center"
+                    >
+                      <AlignCenter size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormattingToSelection('<p class="text-right">', '</p>', 'right-aligned text')}
+                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/10"
+                      title="Align Right"
+                    >
+                      <AlignRight size={14} />
+                    </button>
+
+                    {/* Text Color Swatches */}
+                    <div className="flex items-center space-x-1 pl-1 border-l border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => applyColorToSelection("#d9b45c", "Gold")}
+                        className="w-4 h-4 rounded-full bg-[#d9b45c] border border-white/20 hover:scale-110 transition-transform"
+                        title="Gold Text Color"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => applyColorToSelection("#ffffff", "White")}
+                        className="w-4 h-4 rounded-full bg-white border border-white/20 hover:scale-110 transition-transform"
+                        title="White Text Color"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => applyColorToSelection("#10b981", "Emerald")}
+                        className="w-4 h-4 rounded-full bg-emerald-500 border border-white/20 hover:scale-110 transition-transform"
+                        title="Emerald Text Color"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => applyColorToSelection("#38bdf8", "Sky Blue")}
+                        className="w-4 h-4 rounded-full bg-sky-400 border border-white/20 hover:scale-110 transition-transform"
+                        title="Sky Blue Text Color"
+                      />
+                    </div>
+
+                    {/* Quick Modals */}
                     <button
                       type="button"
                       onClick={() => setShowInternalImagesModal(true)}
-                      className="px-2.5 py-1.5 bg-[#12141b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg font-bold flex items-center space-x-1"
+                      className="px-2.5 py-1 bg-[#12141b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg font-bold flex items-center space-x-1"
                     >
                       <ImageIcon size={13} />
-                      <span>+ Internal Images</span>
+                      <span>+ Images</span>
                     </button>
 
-                    {/* Internal Link Search Button */}
                     <button
                       type="button"
                       onClick={() => setShowInternalLinkModal(true)}
-                      className="px-2.5 py-1.5 bg-[#12141b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg font-bold flex items-center space-x-1"
+                      className="px-2.5 py-1 bg-[#12141b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg font-bold flex items-center space-x-1"
                     >
                       <Link2 size={13} />
                       <span>Internal Link</span>
                     </button>
 
-                    {/* Quick Formatting Buttons */}
                     <button
                       type="button"
-                      onClick={() => handleInsertBlockHtml(`<h2>Section Subheading (H2)</h2>\n<p>Write detailed explanation here...</p>`)}
-                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
-                      title="Insert H2 Subheading"
+                      onClick={() => setShowTableModal(true)}
+                      className="p-1.5 bg-[#12141b] text-blue-400 hover:text-white rounded border border-white/10"
+                      title="Insert Table"
                     >
-                      <Heading2 size={14} />
+                      <TableIcon size={14} />
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => handleInsertBlockHtml(`<h3>Sub-point (H3)</h3>\n<p>Write sub-points here...</p>`)}
-                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
-                      title="Insert H3 Subheading"
+                      onClick={() => setShowButtonModal(true)}
+                      className="p-1.5 bg-[#12141b] text-amber-400 hover:text-white rounded border border-white/10"
+                      title="Insert Button"
                     >
-                      <Heading3 size={14} />
+                      <Sparkles size={14} />
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => handleInsertBlockHtml(`<blockquote class="border-l-4 border-[#d9b45c] bg-[#12141b] p-4 my-4 rounded-r-xl italic text-[#f2d98a]"><p>"Recite Quran with Tajweed precision."</p></blockquote>`)}
-                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
-                      title="Insert Quote / Verse"
+                      onClick={() => setShowFaqModal(true)}
+                      className="p-1.5 bg-[#12141b] text-pink-400 hover:text-white rounded border border-white/10"
+                      title="Insert FAQ Accordion"
                     >
-                      <Quote size={14} />
+                      <FaqIcon size={14} />
                     </button>
 
                     <button
                       type="button"
-                      onClick={() => handleInsertBlockHtml(`<ul class="list-disc list-inside space-y-1 my-3 text-xs text-[#c9c2ab]"><li>First key principle</li><li>Second key principle</li></ul>`)}
-                      className="p-1.5 bg-[#12141b] text-[#c9c2ab] hover:text-white rounded border border-white/5"
-                      title="Insert Bulleted List"
+                      onClick={clearFormattingSelection}
+                      className="px-2 py-1 bg-[#12141b] text-rose-400 hover:text-white rounded border border-white/10 text-[10px] font-bold"
+                      title="Clear Formatting"
                     >
-                      <List size={14} />
+                      Clear HTML
                     </button>
                   </div>
 
-                  <span className="text-[10px] font-mono text-[#c9c2ab]/50">
-                    Type <code className="text-[#d9b45c]">/</code> for Gutenberg commands
+                  <span className="text-[10px] font-mono text-[#d9b45c] flex items-center space-x-1">
+                    <Sparkles size={12} />
+                    <span>Type <code className="bg-[#12141b] px-1 py-0.5 rounded text-white font-bold">/</code> inside editor for Gutenberg commands</span>
                   </span>
                 </div>
+              </div>
 
-                {/* SLASH COMMAND POPOVER DROPDOWN */}
-                {showSlashMenu && (
-                  <div className="bg-[#12141b] border border-[#d9b45c]/40 rounded-xl p-3 space-y-2 shadow-2xl animate-in fade-in zoom-in-95 duration-150 max-h-80 overflow-y-auto">
-                    <div className="flex items-center space-x-2 border-b border-white/10 pb-2">
-                      <Search size={14} className="text-[#d9b45c]" />
+              {/* GUTENBERG BLOCK INSERTER POPUP MODAL */}
+              {showSlashMenu && (
+                <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+                  <div className="bg-[#12141b] border-2 border-[#d9b45c]/50 rounded-3xl p-6 max-w-3xl w-full space-y-4 shadow-2xl max-h-[85vh] flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                    <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#d9b45c] text-black flex items-center justify-center font-bold">
+                          +
+                        </div>
+                        <h3 className="font-serif text-lg font-bold text-white">Gutenberg Block Library</h3>
+                      </div>
+                      <button onClick={() => setShowSlashMenu(false)} className="text-[#c9c2ab] hover:text-white p-1 rounded-lg hover:bg-white/5">
+                        <X size={20} />
+                      </button>
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="relative">
+                      <Search size={16} className="absolute left-3 top-3 text-[#d9b45c]" />
                       <input
                         type="text"
                         value={slashSearch}
                         onChange={(e) => setSlashSearch(e.target.value)}
-                        placeholder="Search Gutenberg / Rank Math commands (e.g. /image, /table, /callout)..."
-                        className="w-full bg-transparent text-xs text-white outline-none"
+                        placeholder="Search Gutenberg blocks (e.g., /heading, /table, /image, /faq, /youtube, /cta)..."
+                        className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-xl pl-10 pr-10 py-2.5 text-xs text-white focus:outline-none focus:border-[#d9b45c]"
                         autoFocus
                       />
-                      <button onClick={() => setShowSlashMenu(false)} className="text-[#c9c2ab] hover:text-white">
-                        <X size={14} />
-                      </button>
+                      {slashSearch && (
+                        <button onClick={() => setSlashSearch("")} className="absolute right-3 top-3 text-[#c9c2ab] hover:text-white">
+                          <X size={14} />
+                        </button>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                    {/* Category Tabs */}
+                    <div className="flex flex-wrap gap-1 border-b border-white/10 pb-2 text-xs font-bold">
+                      {(["all", "text", "media", "layout", "design", "embed", "seo"] as const).map((cat) => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => setActiveBlockCategory(cat)}
+                          className={`px-3 py-1.5 rounded-lg transition-all capitalize ${
+                            activeBlockCategory === cat
+                              ? "bg-[#d9b45c] text-black font-extrabold"
+                              : "bg-[#07080b] text-[#c9c2ab] hover:text-white border border-white/5"
+                          }`}
+                        >
+                          {cat === "all" ? "All Blocks" : cat}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Filtered Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 overflow-y-auto pr-1 flex-1 py-1">
                       {filteredSlashCommands.map((cmd) => (
                         <div
                           key={cmd.id}
@@ -1303,24 +2085,33 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                             cmd.action();
                             setShowSlashMenu(false);
                           }}
-                          className="p-2 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 hover:border-[#d9b45c]/30 rounded-lg cursor-pointer transition-all flex items-start space-x-2.5 group"
+                          className="p-3 bg-[#07080b] hover:bg-[#d9b45c]/10 border border-white/5 hover:border-[#d9b45c]/40 rounded-2xl cursor-pointer transition-all flex items-start space-x-3 group relative hover:scale-[1.02]"
                         >
-                          <div className="p-1.5 rounded-md bg-[#12141b] group-hover:bg-[#d9b45c] group-hover:text-black transition-colors">
+                          <div className="p-2 rounded-xl bg-[#12141b] group-hover:bg-[#d9b45c] group-hover:text-black transition-colors flex-shrink-0">
                             {cmd.icon}
                           </div>
-                          <div>
+                          <div className="space-y-0.5">
                             <div className="flex items-center space-x-1.5">
-                              <span className="font-mono text-xs font-bold text-[#f2d98a]">{cmd.title}</span>
-                              <span className="text-[10px] text-white font-semibold">{cmd.label}</span>
+                              <span className="font-mono text-xs font-extrabold text-[#f2d98a]">{cmd.title}</span>
+                              <span className="text-[9px] uppercase font-bold text-[#d9b45c]/70 px-1.5 py-0.5 bg-[#d9b45c]/10 rounded">
+                                {cmd.category}
+                              </span>
                             </div>
-                            <p className="text-[10px] text-[#c9c2ab]/60 line-clamp-1 mt-0.5">{cmd.desc}</p>
+                            <h4 className="text-xs font-bold text-white group-hover:text-[#f2d98a]">{cmd.label}</h4>
+                            <p className="text-[10px] text-[#c9c2ab]/70 line-clamp-2">{cmd.desc}</p>
                           </div>
                         </div>
                       ))}
+
+                      {filteredSlashCommands.length === 0 && (
+                        <div className="col-span-3 py-8 text-center text-xs text-[#c9c2ab]">
+                          No blocks found matching "{slashSearch}". Try searching for "/table", "/heading", or "/image".
+                        </div>
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* DUAL MODE EDITOR CANVAS */}
               {editorMode === "code" ? (
@@ -1336,15 +2127,25 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                     </span>
                   </div>
                   <textarea
+                    id="gutenberg-content-textarea"
                     rows={18}
                     value={currentPost.content}
-                    onChange={(e) => handleUpdateField("content", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-xl p-4 text-xs font-mono text-green-400 focus:outline-none focus:border-[#d9b45c] leading-relaxed resize-y"
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      handleUpdateField("content", val);
+                      // Slash trigger
+                      const selStart = e.target.selectionStart;
+                      if (selStart > 0 && val.charAt(selStart - 1) === "/") {
+                        setShowSlashMenu(true);
+                        setSlashSearch("");
+                      }
+                    }}
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-2xl p-4 text-xs font-mono text-green-400 focus:outline-none focus:border-[#d9b45c] leading-relaxed resize-y shadow-inner"
                     placeholder="Write raw HTML content here..."
                   />
                 </div>
               ) : (
-                /* VISUAL RICH EDITOR MODE WITH DRAG & DROP DROPZONE */
+                /* VISUAL RICH EDITOR CANVAS WITH GUTENBERG KEYBOARD DISPATCH */
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="text-[10px] uppercase font-bold text-[#c9c2ab] tracking-wider flex items-center space-x-1">
@@ -1352,7 +2153,7 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                       <span>Visual Editor Canvas</span>
                     </label>
                     <span className="text-[9px] font-mono text-[#d9b45c]">
-                      {contentStats.words} words | {contentStats.paragraphs} paragraphs
+                      {contentStats.words} words | {contentStats.paragraphs} paragraphs | {contentStats.readingTime}
                     </span>
                   </div>
 
@@ -1372,16 +2173,25 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                     />
                     <div className="flex items-center justify-center space-x-2 text-xs text-[#c9c2ab]">
                       <Upload size={14} className="text-[#d9b45c]" />
-                      <span>Drag & Drop image anywhere on editor or click to upload internal photo</span>
+                      <span>Drag & Drop image file anywhere on editor or click to upload internal photo</span>
                     </div>
                   </div>
 
                   <textarea
+                    id="gutenberg-content-textarea"
                     rows={18}
                     value={currentPost.content}
-                    onChange={(e) => handleUpdateField("content", e.target.value)}
-                    className="w-full bg-[#07080b] border border-[#d9b45c]/20 rounded-xl p-4 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors leading-relaxed resize-y"
-                    placeholder="Write article content using HTML or Gutenberg Slash commands..."
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      handleUpdateField("content", val);
+                      const selStart = e.target.selectionStart;
+                      if (selStart > 0 && val.charAt(selStart - 1) === "/") {
+                        setShowSlashMenu(true);
+                        setSlashSearch("");
+                      }
+                    }}
+                    className="w-full bg-[#07080b] border border-[#d9b45c]/30 rounded-2xl p-4 text-xs text-white focus:outline-none focus:border-[#d9b45c] transition-colors leading-relaxed resize-y shadow-inner"
+                    placeholder="Write article content... Type '/' anywhere to open Gutenberg block inserter menu."
                   />
                 </div>
               )}
@@ -1400,28 +2210,41 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
             </div>
           </div>
 
-          {/* FEATURED IMAGE PANEL WITH FILE UPLOAD, DRAG & DROP, & CROPPING */}
+          {/* FEATURED IMAGE PANEL WITH 3:2 CROPPER & RANK MATH RECOMMENDATIONS */}
           <div className="bg-[#12141b] border border-[#d9b45c]/20 rounded-2xl p-5 space-y-4 shadow-xl">
-            <div className="flex items-center justify-between border-b border-white/5 pb-2">
-              <h3 className="text-xs font-serif font-bold text-[#d9b45c] uppercase tracking-wider flex items-center space-x-2">
-                <ImageIcon size={14} />
-                <span>Featured Image & Image SEO Metadata</span>
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowCropModal(true)}
-                className="px-2.5 py-1 bg-[#07080b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg text-[10px] font-bold flex items-center space-x-1"
-              >
-                <Crop size={12} />
-                <span>Image Adjustments</span>
-              </button>
+            <div className="flex flex-wrap items-center justify-between border-b border-white/5 pb-3 gap-2">
+              <div>
+                <h3 className="text-xs font-serif font-bold text-[#d9b45c] uppercase tracking-wider flex items-center space-x-2">
+                  <ImageIcon size={14} />
+                  <span>Featured Image (Rank Math SEO Standard)</span>
+                </h3>
+                <p className="text-[10px] text-[#c9c2ab] mt-0.5">
+                  Recommended upload size: <strong className="text-white">1200 × 800 pixels</strong> (3:2 Aspect Ratio)
+                </p>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-[9px] font-mono uppercase bg-[#d9b45c]/10 text-[#f2d98a] border border-[#d9b45c]/30 px-2 py-0.5 rounded-full font-bold">
+                  3:2 Ratio (1200×800 px)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingCropImage(currentPost.originalCoverImage || currentPost.coverImage || null);
+                    setShowCropModal(true);
+                  }}
+                  className="px-2.5 py-1 bg-[#07080b] hover:bg-white/5 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg text-[10px] font-bold flex items-center space-x-1"
+                >
+                  <Crop size={12} />
+                  <span>3:2 Crop Tool</span>
+                </button>
+              </div>
             </div>
 
             {/* DRAG & DROP FEATURED IMAGE DROPZONE */}
             <div
               onDragOver={handleDragOver}
               onDrop={handleDropFeatured}
-              className="border-2 border-dashed border-[#d9b45c]/40 hover:border-[#d9b45c] bg-[#07080b] p-6 rounded-2xl text-center space-y-2 cursor-pointer transition-all"
+              className="border-2 border-dashed border-[#d9b45c]/40 hover:border-[#d9b45c] bg-[#07080b] p-6 rounded-2xl text-center space-y-2 cursor-pointer transition-all relative group"
               onClick={() => featuredFileInputRef.current?.click()}
             >
               <input
@@ -1431,35 +2254,87 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                 accept="image/*"
                 className="hidden"
               />
-              <Upload size={28} className="mx-auto text-[#d9b45c]" />
+              <Upload size={28} className="mx-auto text-[#d9b45c] group-hover:scale-110 transition-transform" />
               <div className="text-xs font-bold text-white">Upload Featured Image from Computer</div>
-              <p className="text-[10px] text-[#c9c2ab]">Drag & Drop image file here or click to browse files</p>
-              
-              <div className="flex justify-center space-x-2 pt-2" onClick={(e) => e.stopPropagation()}>
+              <p className="text-[10px] text-[#c9c2ab]">
+                Drag & drop image file or click to browse. Recommended size: <span className="text-[#f2d98a] font-bold font-mono">1200 × 800 pixels</span>
+              </p>
+
+              <div className="flex flex-wrap justify-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
                 <button
                   type="button"
                   onClick={() => {
                     setMediaTargetField("featured");
                     setShowMediaLibraryModal(true);
                   }}
-                  className="px-3 py-1.5 bg-[#12141b] hover:bg-white/10 text-[#d9b45c] border border-[#d9b45c]/30 rounded-lg text-[11px] font-bold"
+                  className="px-3 py-1.5 bg-[#12141b] hover:bg-white/10 text-[#d9b45c] border border-[#d9b45c]/30 rounded-lg text-[11px] font-bold flex items-center space-x-1"
                 >
-                  Select from Media Library
+                  <ImageIcon size={12} />
+                  <span>Select from Media Library</span>
                 </button>
+
                 {currentPost.coverImage && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      handleUpdateField("coverImage", "");
-                      handleUpdateField("featuredImage", "");
-                    }}
-                    className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-[11px] font-bold"
-                  >
-                    Remove Image
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingCropImage(currentPost.originalCoverImage || currentPost.coverImage);
+                        setShowCropModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-[#d9b45c]/10 hover:bg-[#d9b45c]/20 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg text-[11px] font-bold flex items-center space-x-1"
+                    >
+                      <Crop size={12} />
+                      <span>Crop & Adjust (3:2)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleUpdateField("coverImage", "");
+                        handleUpdateField("featuredImage", "");
+                        handleUpdateField("originalCoverImage", "");
+                        setImageNaturalDims(null);
+                      }}
+                      className="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-lg text-[11px] font-bold"
+                    >
+                      Remove Image
+                    </button>
+                  </>
                 )}
               </div>
             </div>
+
+            {/* DIMENSION VALIDATION & STATUS BADGE */}
+            {imageNaturalDims && (
+              <div className={`p-3 rounded-xl border text-xs flex items-start space-x-3 ${
+                imageNaturalDims.width >= 1200 && imageNaturalDims.height >= 800 && Math.abs((imageNaturalDims.width / imageNaturalDims.height) - 1.5) < 0.05
+                  ? "bg-green-500/10 border-green-500/30 text-green-300"
+                  : imageNaturalDims.width < 1200 || imageNaturalDims.height < 800
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-300"
+                    : "bg-blue-500/10 border-blue-500/30 text-blue-300"
+              }`}>
+                {imageNaturalDims.width >= 1200 && imageNaturalDims.height >= 800 && Math.abs((imageNaturalDims.width / imageNaturalDims.height) - 1.5) < 0.05 ? (
+                  <CheckCircle2 size={18} className="text-green-400 flex-shrink-0 mt-0.5" />
+                ) : (
+                  <AlertCircle size={18} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                )}
+                <div className="space-y-0.5">
+                  <div className="font-bold flex items-center space-x-2">
+                    <span>Active Image Dimensions: {imageNaturalDims.width} × {imageNaturalDims.height} px</span>
+                    <span className="font-mono text-[9px] px-1.5 py-0.5 bg-black/40 rounded border border-white/10">
+                      Ratio: {(imageNaturalDims.width / imageNaturalDims.height).toFixed(2)}:1
+                    </span>
+                  </div>
+                  <p className="text-[10px] leading-relaxed opacity-90">
+                    {imageNaturalDims.width >= 1200 && imageNaturalDims.height >= 800 && Math.abs((imageNaturalDims.width / imageNaturalDims.height) - 1.5) < 0.05
+                      ? "✓ Verified Rank Math SEO Standard (1200 × 800 px, 3:2 Ratio). Image is perfectly formatted for search snippets & HD social sharing."
+                      : imageNaturalDims.width < 1200 || imageNaturalDims.height < 800
+                        ? `⚠️ Image is smaller than recommended 1200 × 800 pixels. Use the 3:2 Crop Studio to optimize resolution.`
+                        : `⚠️ Current aspect ratio is ${(imageNaturalDims.width / imageNaturalDims.height).toFixed(2)}:1. Use the 3:2 Crop Tool to align with the 1200 × 800 px standard.`}
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* EDITABLE IMAGE PROPERTIES */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs pt-2">
@@ -1502,24 +2377,29 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
               </div>
             </div>
 
-            {/* PREVIEW FEATURED IMAGE BANNER */}
+            {/* PREVIEW FEATURED IMAGE BANNER (RESPONSIVE 3:2 ASPECT RATIO) */}
             {currentPost.coverImage && (
-              <div className="relative h-48 rounded-xl overflow-hidden border border-[#d9b45c]/20 mt-2">
+              <div className="relative w-full aspect-[3/2] rounded-2xl overflow-hidden border border-[#d9b45c]/30 mt-2 shadow-xl bg-black">
                 <img
                   src={currentPost.coverImage}
                   alt={currentPost.imageAltText || "Cover Image"}
                   className="w-full h-full object-cover"
                   style={{
-                    filter: `brightness(${cropBrightness}%) contrast(${cropContrast}%)`
+                    filter: `brightness(${cropBrightness}%) contrast(${cropContrast}%) saturate(${cropSaturation}%)`
                   }}
                   referrerPolicy="no-referrer"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex items-end p-4">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex items-end p-4">
                   <div>
-                    <span className="text-[9px] uppercase font-bold bg-[#d9b45c] text-black px-2 py-0.5 rounded mr-2">
-                      {currentPost.category}
-                    </span>
-                    <h4 className="text-white text-xs font-serif font-bold mt-1">{currentPost.title}</h4>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-[9px] uppercase font-bold bg-[#d9b45c] text-black px-2 py-0.5 rounded">
+                        {currentPost.category}
+                      </span>
+                      <span className="text-[9px] font-mono text-[#f2d98a] bg-black/60 px-2 py-0.5 rounded border border-white/10">
+                        3:2 Preview (1200 × 800)
+                      </span>
+                    </div>
+                    <h4 className="text-white text-sm font-serif font-bold mt-1.5">{currentPost.title}</h4>
                     {currentPost.imageCaption && (
                       <p className="text-[10px] text-[#c9c2ab] italic mt-0.5">{currentPost.imageCaption}</p>
                     )}
@@ -1608,24 +2488,98 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
             </p>
           </div>
 
-          {/* 3. LIVE GOOGLE SERP PREVIEW */}
-          <div className="bg-[#12141b]/80 border border-[#d9b45c]/10 rounded-2xl p-4 space-y-2">
-            <span className="text-[10px] uppercase font-sans font-bold text-[#d9b45c] tracking-widest flex items-center space-x-1">
-              <Eye size={12} />
-              <span>Google SERP Snippet Preview</span>
-            </span>
-            <div className="bg-white text-black p-3.5 rounded-xl space-y-1 text-left font-sans select-text shadow-md">
-              <div className="text-[10px] text-[#202124] flex items-center space-x-1 font-sans">
-                <span>https://truthquranacademy.com</span>
-                <span className="text-gray-400 font-normal">› blog › {(currentPost.slug || "article").toLowerCase()}</span>
+          {/* 3. LIVE GOOGLE SERP & SOCIAL SHARING PREVIEW */}
+          <div className="bg-[#12141b]/80 border border-[#d9b45c]/10 rounded-2xl p-4 space-y-3">
+            <div className="flex flex-wrap items-center justify-between border-b border-white/5 pb-2 gap-2">
+              <span className="text-[10px] uppercase font-sans font-bold text-[#d9b45c] tracking-widest flex items-center space-x-1">
+                <Eye size={12} />
+                <span>SEO & Social Sharing Previews</span>
+              </span>
+              <div className="flex items-center space-x-1 bg-[#07080b] p-0.5 rounded-lg border border-white/5 text-[9px] font-bold">
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab("google")}
+                  className={`px-2 py-1 rounded-md transition-all ${previewTab === "google" ? "bg-[#d9b45c] text-black" : "text-[#c9c2ab] hover:text-white"}`}
+                >
+                  Google SERP
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab("facebook")}
+                  className={`px-2 py-1 rounded-md transition-all ${previewTab === "facebook" ? "bg-blue-600 text-white" : "text-[#c9c2ab] hover:text-white"}`}
+                >
+                  Facebook
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewTab("twitter")}
+                  className={`px-2 py-1 rounded-md transition-all ${previewTab === "twitter" ? "bg-sky-500 text-white" : "text-[#c9c2ab] hover:text-white"}`}
+                >
+                  Twitter / X
+                </button>
               </div>
-              <h4 className="text-sm font-sans text-[#1a0dab] hover:underline cursor-pointer font-medium leading-tight line-clamp-1">
-                {currentPost.metaTitle || currentPost.title}
-              </h4>
-              <p className="text-[11px] text-[#4d5156] leading-normal line-clamp-2 font-light">
-                {currentPost.metaDescription || currentPost.excerpt || "No meta description provided."}
-              </p>
             </div>
+
+            {previewTab === "google" && (
+              <div className="bg-white text-black p-3.5 rounded-xl space-y-1 text-left font-sans select-text shadow-md">
+                <div className="text-[10px] text-[#202124] flex items-center space-x-1 font-sans">
+                  <span>https://truthquranacademy.com</span>
+                  <span className="text-gray-400 font-normal">› blog › {(currentPost.slug || "article").toLowerCase()}</span>
+                </div>
+                <h4 className="text-sm font-sans text-[#1a0dab] hover:underline cursor-pointer font-medium leading-tight line-clamp-1">
+                  {currentPost.metaTitle || currentPost.title}
+                </h4>
+                <p className="text-[11px] text-[#4d5156] leading-normal line-clamp-2 font-light">
+                  {currentPost.metaDescription || currentPost.excerpt || "No meta description provided."}
+                </p>
+              </div>
+            )}
+
+            {previewTab === "facebook" && (
+              <div className="bg-[#18191a] text-[#e4e6eb] rounded-xl overflow-hidden border border-[#3a3b3c] shadow-lg font-sans text-xs">
+                <div className="w-full aspect-[3/2] bg-[#242526] relative overflow-hidden">
+                  {currentPost.coverImage ? (
+                    <img src={currentPost.coverImage} alt={currentPost.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 space-y-1">
+                      <ImageIcon size={24} />
+                      <span className="text-[10px]">No 1200 × 800 px Featured Image Uploaded</span>
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/70 text-[#f2d98a] px-2 py-0.5 rounded text-[8px] font-mono">
+                    3:2 Aspect Ratio
+                  </div>
+                </div>
+                <div className="p-3 bg-[#242526] space-y-1 border-t border-[#3a3b3c]">
+                  <div className="text-[9px] uppercase font-mono text-gray-400 tracking-wider">TRUTHQURANACADEMY.COM</div>
+                  <div className="font-bold text-xs text-white line-clamp-1">{currentPost.ogTitle || currentPost.metaTitle || currentPost.title}</div>
+                  <p className="text-gray-400 text-[10px] line-clamp-2 leading-snug">{currentPost.ogDescription || currentPost.metaDescription || currentPost.excerpt}</p>
+                </div>
+              </div>
+            )}
+
+            {previewTab === "twitter" && (
+              <div className="bg-black text-white rounded-2xl overflow-hidden border border-gray-800 shadow-lg font-sans text-xs">
+                <div className="w-full aspect-[3/2] bg-gray-900 relative overflow-hidden">
+                  {currentPost.coverImage ? (
+                    <img src={currentPost.coverImage} alt={currentPost.title} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 space-y-1">
+                      <ImageIcon size={24} />
+                      <span className="text-[10px]">No 1200 × 800 px Featured Image Uploaded</span>
+                    </div>
+                  )}
+                  <div className="absolute top-2 right-2 bg-black/70 text-[#f2d98a] px-2 py-0.5 rounded text-[8px] font-mono">
+                    Summary Large Image (3:2)
+                  </div>
+                </div>
+                <div className="p-3 space-y-1 bg-black">
+                  <div className="text-[9px] text-gray-500 font-mono">truthquranacademy.com</div>
+                  <div className="font-bold text-xs text-white line-clamp-1">{currentPost.twitterTitle || currentPost.title}</div>
+                  <p className="text-gray-400 text-[10px] line-clamp-2">{currentPost.twitterDescription || currentPost.excerpt}</p>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 4. REAL-TIME AUDIT CHECKS & ACTIONABLE RECOMMENDATIONS */}
@@ -1988,6 +2942,710 @@ export default function WPSEOEditor({ cmsData, onSave, externalPostId }: WPSEOEd
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE BUILDER MODAL 1: TABLE BUILDER */}
+      {showTableModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border-2 border-blue-500/50 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center space-x-2">
+                <TableIcon size={18} className="text-blue-400" />
+                <h3 className="font-serif text-base font-bold text-white">Table Block Builder</h3>
+              </div>
+              <button onClick={() => setShowTableModal(false)} className="text-[#c9c2ab] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Rows Count</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={tableRows}
+                    onChange={(e) => setTableRows(parseInt(e.target.value) || 1)}
+                    className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Columns Count</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={8}
+                    value={tableCols}
+                    onChange={(e) => setTableCols(parseInt(e.target.value) || 1)}
+                    className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="text-xs font-bold text-white">Include Header Row</label>
+                <input
+                  type="checkbox"
+                  checked={tableHasHeader}
+                  onChange={(e) => setTableHasHeader(e.target.checked)}
+                  className="w-4 h-4 accent-[#d9b45c] rounded cursor-pointer"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Table Color Style</label>
+                <select
+                  value={tableStyle}
+                  onChange={(e) => setTableStyle(e.target.value as any)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="gold">Golden Naeemia Theme</option>
+                  <option value="dark">Minimal Dark</option>
+                  <option value="emerald">Emerald Green</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3">
+              <button
+                onClick={() => setShowTableModal(false)}
+                className="px-4 py-2 bg-[#07080b] text-[#c9c2ab] rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInsertCustomTable}
+                className="px-5 py-2 bg-blue-500 text-black font-extrabold text-xs rounded-xl hover:bg-blue-400 transition-all"
+              >
+                Insert Table →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE BUILDER MODAL 2: BUTTON BUILDER */}
+      {showButtonModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border-2 border-amber-500/50 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles size={18} className="text-amber-400" />
+                <h3 className="font-serif text-base font-bold text-white">Button Block Builder</h3>
+              </div>
+              <button onClick={() => setShowButtonModal(false)} className="text-[#c9c2ab] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Button Label Text</label>
+                <input
+                  type="text"
+                  value={buttonText}
+                  onChange={(e) => setButtonText(e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Button Link URL</label>
+                <input
+                  type="text"
+                  value={buttonUrl}
+                  onChange={(e) => setButtonUrl(e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-mono"
+                  placeholder="https://..."
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Button Theme</label>
+                  <select
+                    value={buttonStyle}
+                    onChange={(e) => setButtonStyle(e.target.value as any)}
+                    className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="gold">Golden Filled</option>
+                    <option value="outline">Golden Outline</option>
+                    <option value="emerald">WhatsApp Emerald</option>
+                    <option value="blue">Royal Blue</option>
+                    <option value="dark">Dark Luxury</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Alignment</label>
+                  <select
+                    value={buttonAlign}
+                    onChange={(e) => setButtonAlign(e.target.value as any)}
+                    className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white"
+                  >
+                    <option value="center">Center</option>
+                    <option value="left">Left</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <label className="text-xs font-bold text-white">Open link in new tab (_blank)</label>
+                <input
+                  type="checkbox"
+                  checked={buttonTargetBlank}
+                  onChange={(e) => setButtonTargetBlank(e.target.checked)}
+                  className="w-4 h-4 accent-[#d9b45c] rounded cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3">
+              <button
+                onClick={() => setShowButtonModal(false)}
+                className="px-4 py-2 bg-[#07080b] text-[#c9c2ab] rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInsertCustomButton}
+                className="px-5 py-2 bg-[#d9b45c] text-black font-extrabold text-xs rounded-xl hover:bg-[#f2d98a] transition-all"
+              >
+                Insert Button →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE BUILDER MODAL 3: FAQ BUILDER */}
+      {showFaqModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border-2 border-pink-500/50 rounded-3xl p-6 max-w-xl w-full space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center space-x-2">
+                <FaqIcon size={18} className="text-pink-400" />
+                <h3 className="font-serif text-base font-bold text-white">FAQ Schema Accordion Builder</h3>
+              </div>
+              <button onClick={() => setShowFaqModal(false)} className="text-[#c9c2ab] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {faqItems.map((item, index) => (
+                <div key={index} className="p-4 bg-[#07080b] border border-white/10 rounded-2xl space-y-2 relative">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] uppercase font-extrabold text-[#d9b45c]">FAQ Item #{index + 1}</span>
+                    {faqItems.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setFaqItems(faqItems.filter((_, i) => i !== index))}
+                        className="text-rose-400 hover:text-rose-300 p-1"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+                  <input
+                    type="text"
+                    value={item.question}
+                    onChange={(e) => {
+                      const updated = [...faqItems];
+                      updated[index].question = e.target.value;
+                      setFaqItems(updated);
+                    }}
+                    placeholder="Enter question..."
+                    className="w-full bg-[#12141b] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                  />
+                  <textarea
+                    rows={2}
+                    value={item.answer}
+                    onChange={(e) => {
+                      const updated = [...faqItems];
+                      updated[index].answer = e.target.value;
+                      setFaqItems(updated);
+                    }}
+                    placeholder="Enter detailed answer..."
+                    className="w-full bg-[#12141b] border border-white/10 rounded-xl px-3 py-2 text-white"
+                  />
+                </div>
+              ))}
+
+              <button
+                type="button"
+                onClick={() => setFaqItems([...faqItems, { question: "New FAQ Question?", answer: "Clear answer explaining..." }])}
+                className="w-full py-2 bg-[#07080b] hover:bg-white/5 border border-dashed border-[#d9b45c]/40 text-[#f2d98a] font-bold text-xs rounded-xl flex items-center justify-center space-x-1"
+              >
+                <Plus size={14} />
+                <span>Add Question</span>
+              </button>
+
+              <div className="flex items-center justify-between pt-2 border-t border-white/10">
+                <label className="text-xs font-bold text-white">Generate FAQPage Schema (JSON-LD)</label>
+                <input
+                  type="checkbox"
+                  checked={faqIncludeSchema}
+                  onChange={(e) => setFaqIncludeSchema(e.target.checked)}
+                  className="w-4 h-4 accent-[#d9b45c] rounded cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3">
+              <button
+                onClick={() => setShowFaqModal(false)}
+                className="px-4 py-2 bg-[#07080b] text-[#c9c2ab] rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInsertCustomFaq}
+                className="px-5 py-2 bg-pink-500 text-black font-extrabold text-xs rounded-xl hover:bg-pink-400 transition-all"
+              >
+                Insert FAQ Block →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE BUILDER MODAL 4: EMBED BUILDER */}
+      {showEmbedModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border-2 border-red-500/50 rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center space-x-2">
+                <Film size={18} className="text-red-400" />
+                <h3 className="font-serif text-base font-bold text-white">Embed Block Builder</h3>
+              </div>
+              <button onClick={() => setShowEmbedModal(false)} className="text-[#c9c2ab] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Embed Type</label>
+                <select
+                  value={embedType}
+                  onChange={(e) => setEmbedType(e.target.value as any)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white"
+                >
+                  <option value="youtube">YouTube Video</option>
+                  <option value="vimeo">Vimeo Video</option>
+                  <option value="googlemaps">Google Maps Embed</option>
+                  <option value="custom">Custom Iframe / Code</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">
+                  {embedType === "custom" ? "Iframe Code or URL" : "Media / Map Share URL"}
+                </label>
+                <input
+                  type="text"
+                  value={embedUrl}
+                  onChange={(e) => setEmbedUrl(e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-mono"
+                  placeholder="https://..."
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3">
+              <button
+                onClick={() => setShowEmbedModal(false)}
+                className="px-4 py-2 bg-[#07080b] text-[#c9c2ab] rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInsertCustomEmbed}
+                className="px-5 py-2 bg-red-500 text-black font-extrabold text-xs rounded-xl hover:bg-red-400 transition-all"
+              >
+                Insert Embed Container →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* INTERACTIVE BUILDER MODAL 5: CTA BANNER BUILDER */}
+      {showCtaModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border-2 border-[#d9b45c]/50 rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center space-x-2">
+                <Sparkles size={18} className="text-[#d9b45c]" />
+                <h3 className="font-serif text-base font-bold text-white">Call To Action Banner Builder</h3>
+              </div>
+              <button onClick={() => setShowCtaModal(false)} className="text-[#c9c2ab] hover:text-white">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Headline</label>
+                <input
+                  type="text"
+                  value={ctaTitle}
+                  onChange={(e) => setCtaTitle(e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Subtitle Description</label>
+                <textarea
+                  rows={2}
+                  value={ctaDesc}
+                  onChange={(e) => setCtaDesc(e.target.value)}
+                  className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Button Text</label>
+                  <input
+                    type="text"
+                    value={ctaBtnText}
+                    onChange={(e) => setCtaBtnText(e.target.value)}
+                    className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-[#c9c2ab] block mb-1">Destination Link</label>
+                  <input
+                    type="text"
+                    value={ctaBtnUrl}
+                    onChange={(e) => setCtaBtnUrl(e.target.value)}
+                    className="w-full bg-[#07080b] border border-white/10 rounded-xl px-3 py-2 text-white font-mono"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-3 pt-3">
+              <button
+                onClick={() => setShowCtaModal(false)}
+                className="px-4 py-2 bg-[#07080b] text-[#c9c2ab] rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleInsertCustomCta}
+                className="px-5 py-2 bg-[#d9b45c] text-black font-extrabold text-xs rounded-xl hover:bg-[#f2d98a] transition-all"
+              >
+                Insert Banner →
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: 3:2 FEATURED IMAGE CROPPING & OPTIMIZATION STUDIO */}
+      {showCropModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#12141b] border-2 border-[#d9b45c]/50 rounded-3xl p-6 max-w-3xl w-full space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div>
+                <div className="flex items-center space-x-2">
+                  <Crop size={20} className="text-[#d9b45c]" />
+                  <h3 className="font-serif text-lg font-bold text-white">3:2 Featured Image Cropper & Optimization Studio</h3>
+                </div>
+                <p className="text-[11px] text-[#c9c2ab] mt-0.5">
+                  Rank Math SEO Standard: <span className="text-[#f2d98a] font-bold">1200 × 800 pixels</span> (Fixed 3:2 Aspect Ratio)
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowCropModal(false);
+                  setPendingCropImage(null);
+                }}
+                className="text-[#c9c2ab] hover:text-white p-1 rounded-lg bg-white/5"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* RESOLUTION STATS BANNER */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
+              <div className="bg-[#07080b] p-2.5 rounded-xl border border-white/10">
+                <span className="text-[9px] uppercase text-[#c9c2ab] block">Recommended Size</span>
+                <span className="font-mono font-bold text-[#d9b45c]">1200 × 800 px</span>
+              </div>
+              <div className="bg-[#07080b] p-2.5 rounded-xl border border-white/10">
+                <span className="text-[9px] uppercase text-[#c9c2ab] block">Aspect Ratio</span>
+                <span className="font-mono font-bold text-[#d9b45c]">3:2 Standard</span>
+              </div>
+              <div className="bg-[#07080b] p-2.5 rounded-xl border border-white/10">
+                <span className="text-[9px] uppercase text-[#c9c2ab] block">Target Format</span>
+                <span className="font-mono font-bold text-green-400">Web-Optimized JPEG</span>
+              </div>
+              <div className="bg-[#07080b] p-2.5 rounded-xl border border-white/10">
+                <span className="text-[9px] uppercase text-[#c9c2ab] block">Quality Compression</span>
+                <span className="font-mono font-bold text-sky-400">{Math.round(cropQuality * 100)}% ({cropQuality < 0.9 ? "~150 KB" : "~250 KB"})</span>
+              </div>
+            </div>
+
+            {/* LIVE 3:2 CROPPING PREVIEW VIEWPORT WITH MOUSE DRAG PANNING */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-[#c9c2ab]">
+                <span className="font-bold text-white flex items-center space-x-1">
+                  <Eye size={14} className="text-[#d9b45c]" />
+                  <span>Interactive 3:2 Canvas Preview</span>
+                </span>
+                <span className="text-[10px] font-mono text-[#d9b45c]">
+                  Tip: Drag image or use Zoom / Pan sliders to compose focal area
+                </span>
+              </div>
+
+              <div
+                className="relative w-full aspect-[3/2] bg-[#07080b] rounded-2xl overflow-hidden border-2 border-[#d9b45c]/50 cursor-grab active:cursor-grabbing select-none shadow-2xl"
+                onMouseDown={(e) => {
+                  setIsDraggingCanvas(true);
+                  setDragStartPos({ x: e.clientX, y: e.clientY });
+                }}
+                onMouseMove={(e) => {
+                  if (!isDraggingCanvas) return;
+                  const deltaX = e.clientX - dragStartPos.x;
+                  const deltaY = e.clientY - dragStartPos.y;
+                  setCropPanX((prev) => Math.min(50, Math.max(-50, prev + deltaX * 0.15)));
+                  setCropPanY((prev) => Math.min(50, Math.max(-50, prev + deltaY * 0.15)));
+                  setDragStartPos({ x: e.clientX, y: e.clientY });
+                }}
+                onMouseUp={() => setIsDraggingCanvas(false)}
+                onMouseLeave={() => setIsDraggingCanvas(false)}
+              >
+                {/* IMAGE LAYER WITH TRANSFORM ZOOM & PAN */}
+                {pendingCropImage || currentPost?.originalCoverImage || currentPost?.coverImage ? (
+                  <img
+                    src={pendingCropImage || currentPost?.originalCoverImage || currentPost?.coverImage}
+                    alt="Crop preview"
+                    className="w-full h-full object-cover transition-transform duration-75 pointer-events-none"
+                    style={{
+                      transform: `scale(${cropScale}) translate(${cropPanX}%, ${cropPanY}%)`,
+                      filter: `brightness(${cropBrightness}%) contrast(${cropContrast}%) saturate(${cropSaturation}%)`
+                    }}
+                  />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center text-[#c9c2ab]">
+                    <Upload size={32} className="text-[#d9b45c] mb-2" />
+                    <span>No image selected for cropping</span>
+                  </div>
+                )}
+
+                {/* RULE OF THIRDS GRID OVERLAY */}
+                <div className="absolute inset-0 pointer-events-none grid grid-cols-3 grid-rows-3 border border-white/20">
+                  <div className="border-r border-b border-white/15" />
+                  <div className="border-r border-b border-white/15" />
+                  <div className="border-b border-white/15" />
+                  <div className="border-r border-b border-white/15" />
+                  <div className="border-r border-b border-white/15" />
+                  <div className="border-b border-white/15" />
+                  <div className="border-r border-white/15" />
+                  <div className="border-r border-white/15" />
+                  <div className="" />
+                </div>
+
+                {/* BADGE OVERLAY */}
+                <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-sm border border-[#d9b45c]/40 text-[#f2d98a] px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold flex items-center space-x-1.5">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                  <span>Target Output: 1200 × 800 px (3:2)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* CROP CONTROL SLIDERS & PRESETS */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs bg-[#07080b] p-4 rounded-2xl border border-white/10">
+              
+              {/* ZOOM & PAN CONTROLS */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-[#d9b45c] uppercase text-[10px] tracking-wider border-b border-white/5 pb-1">
+                  Zoom & Pan Framing
+                </h4>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-[#c9c2ab] mb-1 font-mono">
+                    <span>Zoom Scale</span>
+                    <span>{cropScale.toFixed(2)}x</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1.0}
+                    max={3.0}
+                    step={0.05}
+                    value={cropScale}
+                    onChange={(e) => setCropScale(parseFloat(e.target.value))}
+                    className="w-full accent-[#d9b45c]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-[#c9c2ab] mb-1 font-mono">
+                    <span>Horizontal Pan (X)</span>
+                    <span>{cropPanX > 0 ? `+${cropPanX.toFixed(0)}%` : `${cropPanX.toFixed(0)}%`}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-50}
+                    max={50}
+                    step={1}
+                    value={cropPanX}
+                    onChange={(e) => setCropPanX(parseFloat(e.target.value))}
+                    className="w-full accent-[#d9b45c]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-[#c9c2ab] mb-1 font-mono">
+                    <span>Vertical Pan (Y)</span>
+                    <span>{cropPanY > 0 ? `+${cropPanY.toFixed(0)}%` : `${cropPanY.toFixed(0)}%`}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={-50}
+                    max={50}
+                    step={1}
+                    value={cropPanY}
+                    onChange={(e) => setCropPanY(parseFloat(e.target.value))}
+                    className="w-full accent-[#d9b45c]"
+                  />
+                </div>
+              </div>
+
+              {/* IMAGE ADJUSTMENTS & ASPECT RATIO */}
+              <div className="space-y-3">
+                <h4 className="font-bold text-[#d9b45c] uppercase text-[10px] tracking-wider border-b border-white/5 pb-1">
+                  Color & Brightness Enhancements
+                </h4>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-[#c9c2ab] mb-1 font-mono">
+                    <span>Brightness</span>
+                    <span>{cropBrightness}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={50}
+                    max={150}
+                    step={1}
+                    value={cropBrightness}
+                    onChange={(e) => setCropBrightness(parseInt(e.target.value))}
+                    className="w-full accent-[#d9b45c]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-[#c9c2ab] mb-1 font-mono">
+                    <span>Contrast</span>
+                    <span>{cropContrast}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={50}
+                    max={150}
+                    step={1}
+                    value={cropContrast}
+                    onChange={(e) => setCropContrast(parseInt(e.target.value))}
+                    className="w-full accent-[#d9b45c]"
+                  />
+                </div>
+
+                <div>
+                  <div className="flex justify-between text-[10px] text-[#c9c2ab] mb-1 font-mono">
+                    <span>Saturation</span>
+                    <span>{cropSaturation}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={50}
+                    max={150}
+                    step={1}
+                    value={cropSaturation}
+                    onChange={(e) => setCropSaturation(parseInt(e.target.value))}
+                    className="w-full accent-[#d9b45c]"
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* QUICK PRESETS & ASPECT RATIO SELECTOR */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-white/10 text-xs">
+              <div className="flex items-center space-x-2">
+                <span className="text-[10px] uppercase font-bold text-[#c9c2ab]">Target Ratio:</span>
+                <select
+                  value={cropAspectRatio}
+                  onChange={(e: any) => setCropAspectRatio(e.target.value)}
+                  className="bg-[#07080b] border border-[#d9b45c]/30 rounded-lg px-2.5 py-1 text-xs text-[#f2d98a] font-bold"
+                >
+                  <option value="3:2">3:2 (1200 × 800 px) [Recommended Rank Math Standard]</option>
+                  <option value="16:9">16:9 (1200 × 675 px) [Widescreen Banner]</option>
+                  <option value="1:1">1:1 (800 × 800 px) [Square Social]</option>
+                  <option value="4:3">4:3 (1200 × 900 px) [Classic Photo]</option>
+                </select>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={handleQuickAutoCrop3by2}
+                  className="px-3 py-1.5 bg-[#07080b] hover:bg-white/10 text-[#f2d98a] border border-[#d9b45c]/30 rounded-lg text-xs font-bold"
+                >
+                  Auto-Center 3:2 (1200×800)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCropScale(1.0);
+                    setCropPanX(0);
+                    setCropPanY(0);
+                    setCropBrightness(100);
+                    setCropContrast(100);
+                    setCropSaturation(100);
+                  }}
+                  className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-[#c9c2ab] rounded-lg text-xs font-bold"
+                >
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* FOOTER ACTION BUTTONS */}
+            <div className="flex items-center justify-between pt-3 border-t border-white/10">
+              <div className="text-[10px] text-[#c9c2ab] italic">
+                Generates web-optimized JPEG at exact 1200 × 800 px resolution
+              </div>
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCropModal(false);
+                    setPendingCropImage(null);
+                  }}
+                  className="px-4 py-2 bg-[#07080b] text-[#c9c2ab] rounded-xl text-xs font-bold hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleApplyCropAndOptimize}
+                  className="px-6 py-2.5 bg-gradient-to-r from-[#f2d98a] to-[#d9b45c] text-black font-extrabold text-xs rounded-xl hover:brightness-110 transition-all flex items-center space-x-2 shadow-lg"
+                >
+                  <Check size={16} />
+                  <span>Save & Apply 1200 × 800 px Optimized Image</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

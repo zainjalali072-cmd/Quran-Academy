@@ -98,6 +98,10 @@ export interface BlogPost {
   twitterDescription?: string;
   twitterCard?: string;
   featuredImage?: string;
+  originalCoverImage?: string;
+  imageWidth?: number;
+  imageHeight?: number;
+  imageAspectRatio?: string;
   imageAltText?: string;
   imageTitle?: string;
   imageCaption?: string;
