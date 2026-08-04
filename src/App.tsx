@@ -46,7 +46,7 @@ import AutoOpeningQuran from "./components/AutoOpeningQuran";
 import BlogSection from "./components/BlogSection";
 import WPSimulator from "./components/WPSimulator";
 import SEOHead from "./components/SEOHead";
-import { getCMSData } from "./cmsStore";
+import { getCMSData, fetchCMSDataFromServer } from "./cmsStore";
 
 import AboutPage from "./components/AboutPage";
 import CoursesPage from "./components/CoursesPage";
@@ -125,6 +125,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    fetchCMSDataFromServer();
     const handleSync = () => setCms(getCMSData());
     window.addEventListener("cms_data_updated", handleSync);
     return () => window.removeEventListener("cms_data_updated", handleSync);

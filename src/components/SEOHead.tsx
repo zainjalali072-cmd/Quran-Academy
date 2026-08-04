@@ -29,7 +29,12 @@ export default function SEOHead({ cmsData, currentView, activePostId }: SEOHeadP
 
     if (currentView === "blog-post" && activePostId) {
       const posts = cmsData.blogPosts || [];
-      const post = posts.find(p => p.id === activePostId);
+      const post = posts.find(p => 
+        p.id === activePostId || 
+        p.slug === activePostId || 
+        (p.slug && activePostId && p.slug.toLowerCase() === activePostId.toLowerCase()) ||
+        (p.id && activePostId && p.id.toLowerCase() === activePostId.toLowerCase())
+      );
       if (post) {
         title = post.metaTitle || post.seoTitle || `${post.title} | Truth Quran Academy`;
         description = post.metaDescription || post.excerpt || description;

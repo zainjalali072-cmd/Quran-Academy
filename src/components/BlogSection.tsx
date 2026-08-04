@@ -82,13 +82,15 @@ export default function BlogSection({
   }, []);
 
   const allPosts = (cms.blogPosts && cms.blogPosts.length > 0) ? cms.blogPosts : (cms.posts || blogPostsData);
-  const currentPosts = allPosts.filter(p => !p.status || p.status === "published");
+  const currentPosts = allPosts.filter(p => !p.status || p.status.toLowerCase() === "published" || p.status.toLowerCase() === "approved");
 
   const categories = ["All", ...Array.from(new Set(allPosts.map(p => p.category).filter(Boolean)))];
 
   // Handle post clicks
   const handlePostClick = (postId: string) => {
-    setActivePostId(postId);
+    const found = allPosts.find(p => p.id === postId || p.slug === postId || (p.slug && p.slug.toLowerCase() === postId.toLowerCase()));
+    const identifier = found?.slug || found?.id || postId;
+    setActivePostId(identifier);
     setView("blog-post");
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
@@ -130,7 +132,12 @@ export default function BlogSection({
 
   // Render Single Full Blog Post View
   if (currentView === "blog-post" && activePostId) {
-    const post = allPosts.find((p) => p.id === activePostId);
+    const post = allPosts.find((p) => 
+      p.id === activePostId || 
+      p.slug === activePostId || 
+      (p.slug && activePostId && p.slug.toLowerCase() === activePostId.toLowerCase()) ||
+      (p.id && activePostId && p.id.toLowerCase() === activePostId.toLowerCase())
+    );
     if (!post) {
       return (
         <div className="text-center py-20">
@@ -151,10 +158,16 @@ export default function BlogSection({
     const authorRole = post.author?.role || "Senior Quran Scholar & Tajweed Instructor";
 
     // Dynamic Related posts in same category or general
-    const relatedPosts = currentPosts
-      .filter(p => p.id !== post.id)
-      .filter(p => p.category === post.category || selectedCategory === "All")
-      .slice(0, 3);
+    let relatedPosts = currentPosts
+      .filter(p => p.id !== post.id && p.slug !== post.slug)
+      .filter(p => p.category === post.category);
+
+    if (relatedPosts.length < 3) {
+      const extra = currentPosts.filter(p => p.id !== post.id && p.slug !== post.slug && !relatedPosts.some(r => r.id === p.id));
+      relatedPosts = [...relatedPosts, ...extra].slice(0, 3);
+    } else {
+      relatedPosts = relatedPosts.slice(0, 3);
+    }
 
     // Article FAQs
     const defaultFaqs = [

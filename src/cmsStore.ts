@@ -823,6 +823,24 @@ export const getCMSData = (): CMSData => {
   };
 };
 
+export const fetchCMSDataFromServer = async (): Promise<CMSData> => {
+  try {
+    const res = await fetch("/api/cms-data");
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.blogPosts) {
+        data.blogPosts = data.blogPosts.map(ensureBlogPostSEO);
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      window.dispatchEvent(new Event("cms_data_updated"));
+      return data;
+    }
+  } catch (err) {
+    console.warn("Could not fetch CMS data from server:", err);
+  }
+  return getCMSData();
+};
+
 export const saveCMSData = async (data: CMSData): Promise<boolean> => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
   // Dispatch a custom event to notify React components of changes
